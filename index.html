@@ -1,41 +1,181 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title></title>
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      background: black;
-      color: white;
-      font-family: monospace;
-      overflow: hidden;
+    :root{
+      --bg:#000;
+      --fg:#fff;
+      --barW:14px;     /* largeur de la barre */
+      --barH:28px;     /* hauteur de la barre */
+      --fs:26px;       /* taille texte */
+      --gap:10px;
     }
 
-    #container {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
+    html, body{
+      margin:0;
+      padding:0;
+      width:100%;
+      height:100%;
+      background:var(--bg);
+      color:var(--fg);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      overflow:hidden;
     }
 
-    #input {
-      outline: none;
-      border: none;
-      background: black;
-      color: white;
-      font-size: 24px;
-      caret-color: white;
-      width: 80%;
+    /* zone centrée */
+    #stage{
+      height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+      box-sizing:border-box;
+    }
+
+    /* colonne */
+    #panel{
+      width:min(900px, 92vw);
+    }
+
+    /* historique (au-dessus) */
+    #log{
+      min-height: 180px;
+      max-height: 45vh;
+      overflow:auto;
+      padding: 0 2px 18px 2px;
+      box-sizing:border-box;
+      line-height: 1.35;
+      font-size: 18px;
+      opacity: .9;
+    }
+
+    .line{ margin: 10px 0; white-space: pre-wrap; }
+    .who{ opacity:.7; margin-right:8px; }
+    .nea{ opacity: .95; }
+
+    /* ligne de saisie centrée */
+    #row{
+      display:flex;
+      align-items:center;
+      gap: var(--gap);
+    }
+
+    /* input invisible (texte), on gère l’affichage nous-mêmes */
+    #hiddenInput{
+      position:absolute;
+      left:-9999px;
+      opacity:0;
+    }
+
+    /* texte tapé */
+    #typed{
+      font-size: var(--fs);
+      white-space: pre;
+      word-break: break-word;
+      min-height: var(--barH);
+    }
+
+    /* barre visible */
+    #cursor{
+      width: var(--barW);
+      height: var(--barH);
+      background: var(--fg);
+      display:inline-block;
+      animation: blink 1s steps(1) infinite;
+      transform: translateY(2px);
+      flex: 0 0 auto;
+    }
+
+    @keyframes blink{
+      50%{ opacity:0; }
+    }
+
+    /* petit hint discret */
+    #hint{
+      margin-top: 14px;
+      font-size: 14px;
+      opacity: .35;
     }
   </style>
 </head>
+
 <body>
-  <div id="container">
-    <input id="input" type="text" autofocus />
+  <input id="hiddenInput" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" />
+  <div id="stage">
+    <div id="panel">
+      <div id="log"></div>
+
+      <div id="row" aria-label="saisie">
+        <div id="typed"></div>
+        <span id="cursor" aria-hidden="true"></span>
+      </div>
+
+      <div id="hint">Entrée pour envoyer • Clique n’importe où pour activer la saisie</div>
+    </div>
   </div>
+
+  <script>
+    const hidden = document.getElementById('hiddenInput');
+    const typed  = document.getElementById('typed');
+    const log    = document.getElementById('log');
+
+    // focus au clic partout
+    document.addEventListener('click', () => hidden.focus());
+
+    // affiche une ligne dans l'historique
+    function addLine(who, text, cls){
+      const div = document.createElement('div');
+      div.className = 'line ' + (cls || '');
+      div.innerHTML = `<span class="who">${who}</span>${escapeHtml(text)}`;
+      log.appendChild(div);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function escapeHtml(s){
+      return (s || '').replace(/[&<>"']/g, m => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+      }[m]));
+    }
+
+    // "Néa" v1: une première réaction simple, puis test
+    function neaReply(userText){
+      const t = userText.trim().toLowerCase();
+
+      // première réponse (tu peux changer le texte quand tu veux)
+      if (t.length === 0) return "…";
+
+      // ici, on lance le test rapidement
+      return "Est-ce que tu sais ce que tu fais ici ?";
+    }
+
+    // garder le texte affiché
+    hidden.addEventListener('input', () => {
+      typed.textContent = hidden.value;
+    });
+
+    // envoyer au Enter
+    hidden.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter'){
+        e.preventDefault();
+        const msg = hidden.value;
+        if (msg.trim().length === 0) return;
+
+        addLine('toi ▮', msg, '');
+        hidden.value = '';
+        typed.textContent = '';
+
+        // réponse Néa
+        const rep = neaReply(msg);
+        setTimeout(() => addLine('néa ▮', rep, 'nea'), 350);
+      }
+    });
+
+    // focus au chargement
+    hidden.focus();
+  </script>
 </body>
 </html>
+
