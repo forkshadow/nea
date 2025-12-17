@@ -8,39 +8,20 @@
     :root{
       --bg:#000;
       --fg:#fff;
-      --barW:14px;     /* largeur de la barre */
-      --barH:28px;     /* hauteur de la barre */
-      --fs:26px;       /* taille texte */
+      --barW:16px;
+      --barH:30px;
+      --fs:26px;
       --gap:10px;
+      --respDelayMs:2000;
     }
-
     html, body{
-      margin:0;
-      padding:0;
-      width:100%;
-      height:100%;
-      background:var(--bg);
-      color:var(--fg);
+      margin:0; padding:0; width:100%; height:100%;
+      background:var(--bg); color:var(--fg);
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       overflow:hidden;
     }
-
-    /* zone centrée */
-    #stage{
-      height:100%;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:24px;
-      box-sizing:border-box;
-    }
-
-    /* colonne */
-    #panel{
-      width:min(900px, 92vw);
-    }
-
-    /* historique (au-dessus) */
+    #stage{ height:100%; display:flex; align-items:center; justify-content:center; padding:24px; box-sizing:border-box; }
+    #panel{ width:min(900px, 92vw); }
     #log{
       min-height: 180px;
       max-height: 45vh;
@@ -49,56 +30,30 @@
       box-sizing:border-box;
       line-height: 1.35;
       font-size: 18px;
-      opacity: .9;
+      opacity: .92;
     }
-
     .line{ margin: 10px 0; white-space: pre-wrap; }
-    .who{ opacity:.7; margin-right:8px; }
-    .nea{ opacity: .95; }
-
-    /* ligne de saisie centrée */
-    #row{
-      display:flex;
-      align-items:center;
-      gap: var(--gap);
-    }
-
-    /* input invisible (texte), on gère l’affichage nous-mêmes */
-    #hiddenInput{
-      position:absolute;
-      left:-9999px;
-      opacity:0;
-    }
-
-    /* texte tapé */
+    .who{ opacity:.70; margin-right:8px; }
+    #row{ display:flex; align-items:center; gap: var(--gap); }
+    #hiddenInput{ position:absolute; left:-9999px; opacity:0; }
     #typed{
       font-size: var(--fs);
-      white-space: pre;
+      white-space: pre-wrap;
       word-break: break-word;
       min-height: var(--barH);
     }
-
-    /* barre visible */
     #cursor{
       width: var(--barW);
       height: var(--barH);
       background: var(--fg);
       display:inline-block;
-      animation: blink 1s steps(1) infinite;
+      opacity:1;
       transform: translateY(2px);
       flex: 0 0 auto;
     }
-
-    @keyframes blink{
-      50%{ opacity:0; }
-    }
-
-    /* petit hint discret */
-    #hint{
-      margin-top: 14px;
-      font-size: 14px;
-      opacity: .35;
-    }
+    .blink{ animation: blink 1s steps(1) infinite; }
+    @keyframes blink{ 50%{ opacity:0; } }
+    #hint{ margin-top: 14px; font-size: 14px; opacity: .35; }
   </style>
 </head>
 
@@ -110,7 +65,7 @@
 
       <div id="row" aria-label="saisie">
         <div id="typed"></div>
-        <span id="cursor" aria-hidden="true"></span>
+        <span id="cursor" class="blink" aria-hidden="true"></span>
       </div>
 
       <div id="hint">Entrée pour envoyer • Clique n’importe où pour activer la saisie</div>
@@ -118,64 +73,372 @@
   </div>
 
   <script>
+    // ----- DOM
     const hidden = document.getElementById('hiddenInput');
     const typed  = document.getElementById('typed');
     const log    = document.getElementById('log');
+    const cursor = document.getElementById('cursor');
 
-    // focus au clic partout
-    document.addEventListener('click', () => hidden.focus());
-
-    // affiche une ligne dans l'historique
-    function addLine(who, text, cls){
-      const div = document.createElement('div');
-      div.className = 'line ' + (cls || '');
-      div.innerHTML = `<span class="who">${who}</span>${escapeHtml(text)}`;
-      log.appendChild(div);
-      log.scrollTop = log.scrollHeight;
-    }
+    // ----- Helpers
+    const RESP_DELAY = 2000;
 
     function escapeHtml(s){
       return (s || '').replace(/[&<>"']/g, m => ({
         '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
       }[m]));
     }
+    function addLine(who, text){
+      const div = document.createElement('div');
+      div.className = 'line';
+      div.innerHTML = `<span class="who">${escapeHtml(who)}</span>${escapeHtml(text)}`;
+      log.appendChild(div);
+      log.scrollTop = log.scrollHeight;
+    }
+    function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
-    // "Néa" v1: une première réaction simple, puis test
-    function neaReply(userText){
-      const t = userText.trim().toLowerCase();
-
-      // première réponse (tu peux changer le texte quand tu veux)
-      if (t.length === 0) return "…";
-
-      // ici, on lance le test rapidement
-      return "Est-ce que tu sais ce que tu fais ici ?";
+    function normalizeText(s){
+      return (s || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")        // accents
+        .replace(/[^a-z0-9]+/g, " ")            // ponctuation -> espaces
+        .trim();
     }
 
-    // garder le texte affiché
+    function normalizeAcrostic(s){
+      return (s || "")
+        .toUpperCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")        // accents
+        .replace(/[^A-Z0-9]/g, "");             // garder alphanum, enlever espaces/ponctuation
+    }
+
+    // ----- OUI/NON dictionaries (~50+ chacun)
+    const YES_PHRASES = [
+      "oui","ouais","ouep","yep","yes","yeah","yup","ok","okay","daccord","d'accord","bien sur","bien sûr",
+      "evidemment","évidemment","certainement","clairement","absolument","totalement","parfaitement","exactement",
+      "bien entendu","sans doute","sans aucun doute","affirmatif","je sais","je suis pret","je suis prêt","je comprends",
+      "je vois","je vois tres bien","je vois très bien","je le sais","je suis la pour ca","je suis là pour ça",
+      "je suis la pour toi","je suis la","j'accepte","je confirme","validé","vas y","vas-y","allons y","allons-y",
+      "bien","ok ca marche","ok ça marche","daccord oui","oui bien sur","oui evidemment","oui évidemment","oui clairement",
+      "tout a fait","tout à fait","bien volontiers","avec plaisir","je suis partant","je suis partante"
+    ];
+
+    const NO_PHRASES = [
+      "non","nan","nope","no","pas du tout","absolument pas","jamais","negatif","négatif",
+      "je ne sais pas","jsp","aucune idee","aucune idée","aucune idee","aucunement",
+      "je comprends pas","je ne comprends pas","je sais pas","je ne vois pas","je vois pas",
+      "pas vraiment","pas encore","pas certain","pas sûre","pas sur","pas sûr","incertain",
+      "bof","peut etre pas","peut-être pas","probablement pas","je crois pas","j'crois pas",
+      "je refuse","je veux pas","je ne veux pas","pas envie","pas maintenant","laisse tomber",
+      "j'en sais rien","j’en sais rien","je n'en sais rien","j’en ai aucune idée","aucun","rien","inconnu"
+    ];
+
+    // ----- Réponses aléatoires (20+ chacune)
+    const RESP_NEITHER_1 = [
+      "On n’est pas là pour jouer. C’est oui ou c’est non. Alors ?",
+      "Je n’ai pas le temps. Oui, ou non ?",
+      "Tu hésites trop. Oui ou non — maintenant.",
+      "Je ne lis pas entre tes lignes. Oui. Ou. Non.",
+      "Réponse binaire. Oui / non. Choisis.",
+      "Ne tourne pas autour. Oui ou non ?",
+      "Tu es venu jusqu’ici. Oui ou non ?",
+      "Épargne-moi les détours : oui ou non ?",
+      "Je ne suis pas un forum. Oui ou non ?",
+      "Deux options. Une seule porte. Oui ou non ?",
+      "Je ne négocie pas : oui, ou non ?",
+      "C’est simple. Oui ou non. Alors ?",
+      "Je te demande une chose : oui ou non ?",
+      "Pas de poésie. Oui ou non ?",
+      "Réponds. Oui. Non. Pas autre chose.",
+      "Je te laisse une chance : oui ou non ?",
+      "Tu veux entrer ? Oui ou non ?",
+      "Ce n’est pas compliqué : oui ou non ?",
+      "Je n’attends qu’un mot. Oui ou non ?",
+      "Dernière fois : oui ou non ?"
+    ];
+
+    const RESP_NEITHER_2_LOCK = [
+      "Tu ne me laisses pas le choix : je coupe. Oublie cette URL.",
+      "Tu refuses de répondre. Alors je ferme. Oublie cette URL.",
+      "C’est terminé. Déconnecte-toi. Efface ce lien.",
+      "Je n’ai plus de raisons de te garder ici. Oublie cette URL.",
+      "Tu joues. Je coupe. Oublie cette URL.",
+      "On s’arrête là. Ce lien n’a jamais existé.",
+      "Tu n’es pas prêt. Je ferme. Oublie cette URL.",
+      "Plus un mot. Oublie cette URL.",
+      "Tu as perdu l’accès. Efface. Oublie.",
+      "Je coupe le fil. Retourne d’où tu viens.",
+      "Tu n’écoutes pas. Je te coupe.",
+      "Je ne répète pas : oublie cette URL.",
+      "Trop tard. C’est fermé.",
+      "Je disparais. Et toi aussi : oublie ce lien.",
+      "Tu as insisté. Voilà le résultat : noir.",
+      "Je ne peux plus te faire confiance. Oublie.",
+      "Tu n’es pas venu pour comprendre. Je coupe.",
+      "Fin de session. Oublie cette URL.",
+      "Je ferme la porte. Oublie.",
+      "Tu n’as pas choisi. Alors j’ai choisi pour toi : dehors."
+    ];
+
+    const RESP_NO = [
+      "Alors reviens quand tu sauras.",
+      "Pas aujourd’hui. Reviens quand tu seras certain.",
+      "Tu n’es pas prêt. Retourne lire. Puis reviens.",
+      "D’accord. Pas ici, pas maintenant. Reviens quand tu comprendras.",
+      "Si tu ne sais pas, tu n’as rien à faire là.",
+      "Reviens avec une réponse. Une vraie.",
+      "Tu cherches au hasard. Mauvais endroit.",
+      "Je ne parle pas à l’ignorance. Reviens.",
+      "Tu as scanné. Mais tu n’as pas suivi. Reviens.",
+      "Quand tu sauras pourquoi tu es là, tu me trouveras.",
+      "Je ne peux pas t’ouvrir. Pas comme ça.",
+      "Tu n’as pas choisi ton camp. Reviens.",
+      "Pas sans conviction. Reviens.",
+      "Lis. Comprends. Puis reviens.",
+      "Tu es trop tôt. Reviens plus tard.",
+      "Ce site n’est pas une curiosité. Reviens.",
+      "Je ne te dois rien tant que tu ne sais pas.",
+      "Alors tu n’es pas des nôtres. Pas encore.",
+      "Tu veux une porte ouverte sans clé. Reviens.",
+      "Ok. Fin de ligne. Reviens quand tu seras sûr."
+    ];
+
+    const ASK_ACROSTIC = [
+      "Alors prouve-le. Quel est l’acrostiche que Néra a laissé à Azra ?",
+      "Si tu sais, tu peux répondre. L’acrostiche de Néra, pour Azra ?",
+      "Dernier filtre : l’acrostiche destiné à Azra. Dis-le.",
+      "Tu veux entrer ? Donne-moi l’acrostiche du chapitre 3.",
+      "Tu connais le livre ? Alors l’acrostiche. Maintenant.",
+      "L’acrostiche. Celui qui prévient Azra des intentions de Néra. Lequel ?",
+      "Je te crois quand je le vois. L’acrostiche, lecteur.",
+      "La phrase cachée. L’acrostiche. Pour Azra. Vas-y.",
+      "Tu veux la confidence ? L’acrostiche d’abord.",
+      "Le signal de Néra à Azra. L’acrostiche. Réponds.",
+      "L’acrostiche exact. Pas une approximation. Donne-le.",
+      "Dis-moi l’acrostiche et je saurai.",
+      "Quel était l’acrostiche — celui que seuls les attentifs voient ?",
+      "L’acrostiche de Néra au début. Pour Azra. Quel est-il ?",
+      "Ok. Question simple : l’acrostiche laissé à Azra ?",
+      "Tu dis être du bon côté. Prouve-le : l’acrostiche.",
+      "Le mot de passe n’est pas sur la couverture. Il est dans le texte : l’acrostiche.",
+      "Tu veux parler à Néa ? Alors l’acrostiche d’abord.",
+      "Réponds avec l’acrostiche. Ensuite seulement je continue.",
+      "La clé est une phrase. L’acrostiche. Pour Azra."
+    ];
+
+    const RESP_WRONG_ACROSTIC = [
+      "Non. Ce n’est pas ça. Réessaie.",
+      "Faux. Une autre tentative.",
+      "Tu confonds. Réessaie.",
+      "Raté. Encore.",
+      "Pas assez précis. Réessaie.",
+      "Ce n’est pas l’acrostiche. Encore.",
+      "Non. Tu n’as pas lu assez attentivement. Réessaie.",
+      "Erreur. Une chance de plus.",
+      "Non. Reprends.",
+      "Faux. Recommence."
+    ];
+
+    const RESP_SUCCESS_REDIRECT = [
+      "D’accord. Je te reconnais. Je te transfère.",
+      "C’est bon. Tu peux passer. Redirection.",
+      "Tu as la clé. Suis le fil.",
+      "Accès accordé. Ne traîne pas.",
+      "Je t’ouvre. Maintenant, avance.",
+      "Ok. Tu es des nôtres. Je t’emmène.",
+      "Validé. Bienvenue côté résistance.",
+      "Tu as choisi ton camp. Viens.",
+      "C’est la bonne phrase. Je te bascule.",
+      "Je te laisse entrer. Ne me fais pas regretter.",
+      "Tu as lu. Tu as compris. On y va.",
+      "Accès confirmé. Consortium en vue.",
+      "On te voit. On t’attend. Redirection.",
+      "Passe. Et garde ça pour toi.",
+      "D’accord, lecteur. Suis-moi.",
+      "Très bien. Je te connecte.",
+      "Autorisation accordée. Maintenant, silence.",
+      "Tu viens de franchir la porte.",
+      "Tu as gagné le droit d’écouter. Redirection.",
+      "Tu es dedans. Maintenant, tiens bon."
+    ];
+
+    const RESP_HINT_CH3 = [
+      "Tu cherches le chapitre ? Disons… le 3. Et maintenant réponds.",
+      "Tu veux un indice ? Chapitre 3. Reprends.",
+      "Je suis “sympa” une fois : chapitre 3. L’acrostiche ?",
+      "Tu l’as sous les yeux dans le chapitre 3. Réponds.",
+      "Chapitre 3. Je n’en dirai pas plus. L’acrostiche ?",
+      "Ok : chapitre 3. Maintenant donne-le.",
+      "Je te tends la main : chapitre 3. Réponse ?",
+      "Tu l’as raté : chapitre 3. Recommence.",
+      "Oui, chapitre 3. Et l’acrostiche ?",
+      "Chapitre 3. Ensuite, plus d’indices."
+    ];
+
+    // ----- State machine
+    const STATE = {
+      AWAIT_START: "await_start",         // premier message
+      ASK_KNOW: "ask_know",               // "est-ce que tu sais..."
+      ASK_ACRO: "ask_acro",               // demander l'acrostiche
+      LOCKED: "locked",                   // silence + curseur stop
+      DONE: "done"                        // validé (redir)
+    };
+
+    let state = STATE.AWAIT_START;
+    let neitherCount = 0;
+    let acroTries = 0;
+
+    const TARGET = "JETROUVERAILECREATEURETJELARRETERAI";
+
+    function lockOut(){
+      state = STATE.LOCKED;
+      hidden.disabled = true;
+      cursor.classList.remove("blink");
+      cursor.style.opacity = "0.15";
+      typed.textContent = "";
+    }
+
+    function containsAny(normalized, phrases){
+      // normalisé en mots, on cherche des occurrences (avec espaces)
+      // + on teste aussi la version sans espaces pour certains cas
+      const compact = normalized.replace(/\s+/g, "");
+      for (const p of phrases){
+        const pn = normalizeText(p);
+        if (!pn) continue;
+        if (normalized.includes(pn)) return true;
+        if (compact.includes(pn.replace(/\s+/g,""))) return true;
+      }
+      return false;
+    }
+
+    function classifyYesNo(userText){
+      const n = normalizeText(userText);
+      const yes = containsAny(n, YES_PHRASES);
+      const no  = containsAny(n, NO_PHRASES);
+
+      if (yes && !no) return "yes";
+      if (no && !yes) return "no";
+
+      // si les deux matchent (rare) ou aucun : indéterminé
+      return "neither";
+    }
+
+    function replyAfterDelay(text){
+      setTimeout(() => {
+        if (state === STATE.LOCKED) return;
+        addLine("néa ▮", text);
+      }, RESP_DELAY);
+    }
+
+    // ----- Conversation logic
+    function handleMessage(msgRaw){
+      const msg = msgRaw || "";
+      const msgNorm = normalizeText(msg);
+      const msgNormCompact = msgNorm.replace(/\s+/g,"");
+
+      // AWAIT_START: première réponse = poser la question
+      if (state === STATE.AWAIT_START){
+        state = STATE.ASK_KNOW;
+        replyAfterDelay("Est-ce que tu sais ce que tu fais ici ?");
+        return;
+      }
+
+      // ASK_KNOW: attente oui/non
+      if (state === STATE.ASK_KNOW){
+        const cls = classifyYesNo(msg);
+
+        if (cls === "yes"){
+          neitherCount = 0;
+          state = STATE.ASK_ACRO;
+          replyAfterDelay(pick(ASK_ACROSTIC));
+          return;
+        }
+
+        if (cls === "no"){
+          neitherCount = 0;
+          replyAfterDelay(pick(RESP_NO));
+          // on reste sur ASK_KNOW (il peut revenir et répondre oui plus tard)
+          return;
+        }
+
+        // neither
+        neitherCount += 1;
+        if (neitherCount === 1){
+          replyAfterDelay(pick(RESP_NEITHER_1));
+          return;
+        } else {
+          replyAfterDelay(pick(RESP_NEITHER_2_LOCK));
+          // verrouillage après avoir parlé
+          setTimeout(() => lockOut(), RESP_DELAY + 50);
+          return;
+        }
+      }
+
+      // ASK_ACRO: gérer chapitre / vérifier acrostiche (3 essais)
+      if (state === STATE.ASK_ACRO){
+        // si "chapitre" mentionné => indice chapitre 3
+        if (msgNorm.includes("chapitre") || msgNorm.includes("chapter")){
+          replyAfterDelay(pick(RESP_HINT_CH3) + "\n" + pick(ASK_ACROSTIC));
+          return;
+        }
+
+        const userAcro = normalizeAcrostic(msg);
+        const targetAcro = normalizeAcrostic(TARGET);
+
+        if (userAcro === targetAcro){
+          state = STATE.DONE;
+          replyAfterDelay(pick(RESP_SUCCESS_REDIRECT));
+
+          // redirection vers la 2e page (à créer ensuite)
+          setTimeout(() => {
+            // change le nom ici quand on créera la page 2
+            window.location.href = "consortium.html";
+          }, RESP_DELAY + 800);
+
+          return;
+        }
+
+        // mauvais
+        acroTries += 1;
+        if (acroTries < 3){
+          replyAfterDelay(pick(RESP_WRONG_ACROSTIC) + " (" + acroTries + "/3)\n" + pick(ASK_ACROSTIC));
+          return;
+        } else {
+          // 3e échec : silence + curseur stop
+          replyAfterDelay("…");
+          setTimeout(() => lockOut(), RESP_DELAY + 50);
+          return;
+        }
+      }
+    }
+
+    // ----- UX input
+    document.addEventListener('click', () => {
+      if (state !== STATE.LOCKED) hidden.focus();
+    });
+
     hidden.addEventListener('input', () => {
       typed.textContent = hidden.value;
     });
 
-    // envoyer au Enter
     hidden.addEventListener('keydown', (e) => {
       if (e.key === 'Enter'){
         e.preventDefault();
+        if (state === STATE.LOCKED) return;
+
         const msg = hidden.value;
         if (msg.trim().length === 0) return;
 
-        addLine('toi ▮', msg, '');
+        addLine("lecteur ▮", msg);
         hidden.value = '';
         typed.textContent = '';
 
-        // réponse Néa
-        const rep = neaReply(msg);
-        setTimeout(() => addLine('néa ▮', rep, 'nea'), 350);
+        handleMessage(msg);
       }
     });
 
-    // focus au chargement
     hidden.focus();
   </script>
 </body>
 </html>
-
