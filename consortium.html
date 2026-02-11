@@ -210,15 +210,11 @@
   const copyBtn  = document.getElementById('copyBtn');
   const closeAdminBtn = document.getElementById('closeAdminBtn');
 
-  // IMPORTANT: tu voulais garder EXACTEMENT le délai avant la première frappe
-  // (on l’applique à CHAQUE réponse, pas une fois au chargement)
+  // Délai avant la première frappe (1.2s -> 1.8s) appliqué à CHAQUE réponse
   function respDelayMs(){
-    return 1200 + Math.random() * 600; // 1.2s -> 1.8s
+    return 1200 + Math.random() * 600;
   }
 
-  // -----------------------------
-  // Helpers UI
-  // -----------------------------
   function escapeHtml(s){
     return (s||"").replace(/[&<>"']/g,m=>({
       '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -242,10 +238,9 @@
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
   function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+  function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
 
-  // -----------------------------
-  // “Ne m’interromps pas” (15 variantes)
-  // -----------------------------
+  // 15 recadrages
   const WAIT_SNARK = [
     "Ai au moins la politesse d’attendre que je termine.",
     "Deux secondes. Laisse-moi finir.",
@@ -263,7 +258,25 @@
     "Prépare ta question… mais attends que je conclue.",
     "Si tu insistes, je clignote plus fort."
   ];
-  function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+
+  // 15 reprises (“Donc, je disais…”)
+  const RESUME_PHRASES = [
+    "Donc, je disais, ",
+    "Bref. Je reprends: ",
+    "Revenons à mon point: ",
+    "Je reprends où j’en étais: ",
+    "Pour en revenir à ta question: ",
+    "Je continue: ",
+    "Comme je te l’expliquais: ",
+    "Où en étais-je… voilà: ",
+    "Très bien. Reprenons: ",
+    "Sans interruption, maintenant: ",
+    "Je poursuis, donc: ",
+    "Pour finir ce que je disais: ",
+    "Recentrons: ",
+    "Et donc, pour conclure ce passage: ",
+    "Allez. Suite: "
+  ];
 
   // -----------------------------
   // Matching (simple)
@@ -314,10 +327,18 @@
   }
 
   // -----------------------------
-  // Typing engine (pause/resume)
+  // Typing engine (pause/resume + patch en ligne)
   // -----------------------------
   let isTyping = false;
-  let activeTyping = null; // { who, text, idx, div, timer, doneCb }
+
+  // activeTyping = { who, text, idx, div, timer, doneCb }
+  let activeTyping = null;
+
+  function renderTypingLine(state, shownText){
+    state.div.innerHTML =
+      `<span class="who">${escapeHtml(state.who)}</span><span class="msg">${escapeHtml(shownText)}</span>`;
+    log.scrollTop = log.scrollHeight;
+  }
 
   function pauseTyping(){
     if (!activeTyping) return;
@@ -330,26 +351,27 @@
     const state = activeTyping;
 
     function step(){
-      // vitesse variable (effet naturel)
-      const base = 12;
-      const jitter = Math.random() * 55;
       const ch = state.text[state.idx];
 
+      // vitesse variable + pauses de ponctuation
+      const base = 12;
+      const jitter = Math.random() * 55;
+
       let extra = 0;
-      if (ch === "." || ch === "!" || ch === "?" || ch === "…") extra = 180 + Math.random()*180;
-      if (ch === "," || ch === ";" || ch === ":" ) extra = 90 + Math.random()*120;
-      if (ch === "\n") extra = 120 + Math.random()*120;
+      if (".!?…".includes(ch)) extra = 180 + Math.random()*180;
+      if (",;:".includes(ch))  extra = 90 + Math.random()*120;
+      if (ch === "\n")         extra = 120 + Math.random()*120;
 
       const shown = state.text.slice(0, state.idx + 1);
-      state.div.innerHTML = `<span class="who">${escapeHtml(state.who)}</span><span class="msg">${escapeHtml(shown)}</span>`;
-      log.scrollTop = log.scrollHeight;
+      renderTypingLine(state, shown);
 
       state.idx++;
 
       if (state.idx >= state.text.length){
         isTyping = false;
+        const cb = state.doneCb;
         activeTyping = null;
-        if (state.doneCb) state.doneCb();
+        if (typeof cb === "function") cb();
         return;
       }
 
@@ -368,12 +390,48 @@
       timer: null,
       doneCb: typeof onDone === "function" ? onDone : null
     };
-
     activeTyping = state;
     isTyping = true;
 
-    // initialise ligne vide
-    state.div.innerHTML = `<span class="who">${escapeHtml(state.who)}</span><span class="msg"></span>`;
+    // initialise
+    div.innerHTML = `<span class="who">${escapeHtml(who)}</span><span class="msg"></span>`;
+    resumeTyping();
+  }
+
+  // Patch “interruption” dans la même bulle
+  async function injectInterruption(){
+    if (!activeTyping) return;
+
+    pauseTyping();
+
+    const state = activeTyping;
+
+    // texte déjà écrit + le reste à venir
+    const before = state.text.slice(0, state.idx);
+    const remaining = state.text.slice(state.idx);
+
+    const reprimand = pick(WAIT_SNARK);
+    const resume = pick(RESUME_PHRASES);
+
+    // 1) On affiche immédiatement: "... + recadrage" DANS LA MÊME BULLE
+    const snapped = before + "… " + reprimand;
+    renderTypingLine(state, snapped);
+
+    // petite pause naturelle
+    await sleep(420 + Math.random()*520);
+
+    // 2) On reconstruit le texte complet à taper ensuite:
+    //    before + "… recadrage. " + "Donc je disais, " + remaining
+    const glue = " ";
+    const insert = " " + resume;
+
+    state.text = snapped + glue + insert + remaining;
+
+    // on considère que "snapped + glue + insert" est déjà affiché:
+    const alreadyShown = snapped + glue + insert;
+    state.idx = alreadyShown.length;
+
+    renderTypingLine(state, alreadyShown);
     resumeTyping();
   }
 
@@ -388,28 +446,19 @@
   hidden.addEventListener("input", ()=>typed.textContent=hidden.value);
 
   async function handleMessage(msg){
-    // Pendant qu’elle répond, on ne lance PAS une nouvelle réponse.
-    // (Si l’utilisateur insiste, on le recadre via Enter)
     if (isTyping) return;
 
     try{
       isTyping = true;
 
-      // on affiche "…" tout de suite
       const thinkingEl = addThinkingLine();
-
-      // délai avant la première frappe (gardé tel quel, à chaque réponse)
       await sleep(respDelayMs());
 
-      // on choisit la réponse
       const hit = bestMatch(msg);
       const answer = hit ? ((hit.a || "").trim() || "…") : "Je ne sais pas.";
 
-      // on tape la réponse dans la ligne "…"
       startTypingLine(thinkingEl, "néa ▮", answer, () => {
-        // fin de frappe
         if (!hit){
-          // si pas de match, on enchaîne une seconde phrase (tape aussi)
           const l2 = addLine("néa ▮", "");
           startTypingLine(l2, "néa ▮", "Échap. Crée la fiche. Et je saurai la prochaine fois.", () => {
             adminOut.value = buildQaSnippet(msg);
@@ -423,9 +472,6 @@
       isTyping = false;
       activeTyping = null;
     } finally{
-      // ne pas remettre isTyping=false ici, sinon ça redeviendrait vrai avant la fin de frappe.
-      // c’est startTypingLine -> doneCb qui clôture via activeTyping=null.
-      // on garde un filet de sécu:
       if (!activeTyping) isTyping = false;
     }
   }
@@ -434,12 +480,10 @@
     if (e.key === "Enter"){
       e.preventDefault();
 
-      // Si Néa est en train de taper:
-      // on ignore le message (pas enregistré), on recadre, puis on reprend où elle en était.
+      // Si Néa tape: on NE crée PAS une nouvelle ligne,
+      // on injecte interruption + reprise DANS la même bulle.
       if (isTyping && activeTyping){
-        pauseTyping();
-        addLine("néa ▮", pick(WAIT_SNARK));
-        setTimeout(() => resumeTyping(), 350 + Math.random()*450);
+        injectInterruption();
         return;
       }
 
@@ -448,7 +492,6 @@
 
       addLine("lecteur ▮", msg);
       hidden.value=""; typed.textContent="";
-
       handleMessage(msg);
       return;
     }
