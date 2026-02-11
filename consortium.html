@@ -504,7 +504,95 @@
   window.addEventListener("load", ()=>setTimeout(focusChat, 120));
   hidden.addEventListener("input", ()=>typed.textContent=hidden.value);
 
+  // --- Modération: insultes
+let insultCount = 0;
+
+const BANNED_WORDS = [
+  "connard", "con", "conne", "salope", "pute",
+  "encule", "enculé", "enculer",
+  "fdp", "fils de pute",
+  "batard", "bâtard",
+  "merde", "merdique",
+  "chiant", "chiante",
+  "debile", "débile",
+  "abruti", "abrutie",
+  "idiot", "idiote",
+  "imbecile", "imbécile",
+  "tg", "ta gueule",
+  "nique", "nique ta mere",
+  "ntm",
+  "salaud", "salopard",
+  "crevard"
+];
+
+const POLITE_WARNINGS = [
+  "On va s’arrêter là. Garde un minimum de tenue.",
+  "Ce n’est pas le ton attendu ici.",
+  "Tu peux t’exprimer sans être vulgaire.",
+  "Je ne réponds pas aux attaques gratuites.",
+  "Respire. Reformule. On continuera.",
+  "Je suis ouverte aux questions, pas aux insultes.",
+  "Ce genre de langage ne t’aidera pas.",
+  "Reste correct. Sinon la discussion s’arrête.",
+  "Je te laisse une chance de reformuler.",
+  "Ce n’est pas comme ça qu’on me parle.",
+  "Tu peux faire mieux que ça.",
+  "Je ne suis pas ici pour encaisser.",
+  "Encore une sortie comme ça, et je coupe.",
+  "On se calme. Maintenant.",
+  "Dernier avertissement."
+];
+
+const POLITE_KICK = [
+  "Très bien. La discussion s’arrête ici.",
+  "Tu viens de perdre l’accès à cet échange.",
+  "Je t’avais prévenue. Fin de conversation.",
+  "Ce dialogue est terminé.",
+  "Je ne continuerai pas avec ce ton.",
+  "C’est terminé pour aujourd’hui.",
+  "Reviens quand tu sauras parler.",
+  "La porte est là.",
+  "Conversation close.",
+  "Je coupe ici.",
+  "On s’arrête là.",
+  "Fin de session.",
+  "Ce n’est plus un échange, donc j’arrête.",
+  "Je ne répondrai plus.",
+  "Sortie forcée."
+];
+
+function containsInsult(text){
+  const n = normalize(text);
+  // match simple "contient" (suffit avec ta normalisation)
+  return BANNED_WORDS.some(w => n.includes(normalize(w)));
+}
+
+
   async function handleMessage(msg){
+
+// --- Filtre insultes (avant toute réponse "livre")
+if (containsInsult(msg)){
+  insultCount++;
+
+  // 1ère fois: avertissement
+  if (insultCount === 1){
+    const w = addLine("néa ▮", "");
+    // si tu as la frappe progressive: startTypingLine(w, "néa ▮", pick(POLITE_WARNINGS), ...)
+    // sinon:
+    addLine("néa ▮", pick(POLITE_WARNINGS));
+    return;
+  }
+
+  // 2e fois: kick (soft)
+  addLine("néa ▮", pick(POLITE_KICK));
+
+  // option: bloque les envois ensuite
+  // isTyping = true; // ou un flag "isBanned = true"
+  return;
+}
+    {
+
+    
     if (isTyping) return;
 
     try{
