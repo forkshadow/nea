@@ -58,15 +58,6 @@
     }
 
     .neaTag{ opacity:.75; }
-    .cursorBlock{
-      display:inline-block;
-      width:10px; height:20px;
-      background:var(--fg);
-      margin-left:4px;
-      animation: blink 1s steps(1) infinite;
-      transform: translateY(3px);
-    }
-    @keyframes blink{ 50%{ opacity:0; } }
 
     #chat{
       border:1px solid var(--soft);
@@ -85,6 +76,7 @@
       font-size: 16px;
       opacity: .92;
     }
+
     .chatLine{ margin: 10px 0; white-space: pre-wrap; }
     .who{ opacity:.60; margin-right:8px; }
 
@@ -110,11 +102,11 @@
       height: var(--barH);
       background: var(--fg);
       display:inline-block;
-      opacity:1;
       transform: translateY(2px);
-      flex: 0 0 auto;
       animation: blink 1s steps(1) infinite;
     }
+
+    @keyframes blink{ 50%{ opacity:0; } }
 
     #hint{
       margin-top: 12px;
@@ -123,18 +115,19 @@
       user-select:none;
     }
 
-    /* Mode auteur */
     #adminBox{
       display:none;
       margin-top:14px;
       border-top:1px solid rgba(255,255,255,.10);
       padding-top:14px;
     }
+
     #adminLabel{
       font-size:12px;
       opacity:.55;
       margin-bottom:8px;
     }
+
     #adminOut{
       width:100%;
       background:#000;
@@ -148,12 +141,13 @@
       resize:vertical;
       white-space: pre-wrap;
     }
+
     .btnRow{
       margin-top:10px;
       display:flex;
       gap:10px;
-      flex-wrap:wrap;
     }
+
     button{
       background: rgba(255,255,255,.06);
       color:#fff;
@@ -163,266 +157,135 @@
       font-family: inherit;
       font-size:12px;
       cursor:pointer;
-      opacity:.92;
     }
-    button:hover{ opacity:1; background: rgba(255,255,255,.10); }
   </style>
 </head>
 
 <body>
-  <input id="hiddenInput" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" />
+<input id="hiddenInput" type="text" />
 
-  <div id="stage">
-    <div id="panel">
+<div id="stage">
+  <div id="panel">
 
-      <div id="intro" aria-label="introduction">
-        <div class="line"><span class="neaTag">néa ▮</span> Tu es arrivé jusqu’ici.</div>
-        <div class="line"><span class="neaTag">néa ▮</span> Bravo.</div>
-        <div class="line"><span class="neaTag">néa ▮</span> Tu as lu le Tome I. Ou au moins, tu as tenu le fil.</div>
-        <div class="line"><span class="neaTag">néa ▮</span> Si quelque chose t’échappe, si une scène te résiste, si un détail te gratte l’esprit…</div>
-        <div class="line"><span class="neaTag">néa ▮</span> Pose ta question. Je répondrai avec ce que je sais. Et si je ne sais pas, je te laisserai créer la fiche canonique.</div>
-      </div>
-
-      <div id="chat" aria-label="chat tome 1">
-        <div id="log"></div>
-
-        <div id="row" aria-label="saisie">
-          <div id="typed"></div>
-          <span id="cursor" aria-hidden="true"></span>
-        </div>
-
-        <div id="hint">Entrée pour envoyer • Clique n’importe où pour activer la saisie • Échap: mode Auteur</div>
-
-        <div id="adminBox">
-          <div id="adminLabel">Mode Auteur: copie-colle ce bloc dans <code>qa.js</code> (dans <code>window.QA_BASE</code>).</div>
-          <textarea id="adminOut" readonly></textarea>
-          <div class="btnRow">
-            <button id="copyBtn" type="button">Copier</button>
-            <button id="closeAdminBtn" type="button">Fermer</button>
-          </div>
-        </div>
-      </div>
-
+    <div id="intro">
+      <div class="line"><span class="neaTag">néa ▮</span> Tu es arrivé jusqu’ici.</div>
+      <div class="line"><span class="neaTag">néa ▮</span> Bravo.</div>
+      <div class="line"><span class="neaTag">néa ▮</span> Si quelque chose t’échappe, pose ta question.</div>
     </div>
+
+    <div id="chat">
+      <div id="log"></div>
+
+      <div id="row">
+        <div id="typed"></div>
+        <span id="cursor"></span>
+      </div>
+
+      <div id="hint">Entrée pour envoyer • Clique pour activer • Échap : mode Auteur</div>
+
+      <div id="adminBox">
+        <div id="adminLabel">Mode Auteur — à copier dans <code>qa.js</code></div>
+        <textarea id="adminOut" readonly></textarea>
+        <div class="btnRow">
+          <button id="copyBtn">Copier</button>
+          <button id="closeAdminBtn">Fermer</button>
+        </div>
+      </div>
+    </div>
+
   </div>
+</div>
 
-  <!-- Base Q/R (à construire ensuite) -->
-  <script src="qa.js"></script>
+<script src="qa.js"></script>
 
-  <script>
-    // ---------- DOM
-    const hidden = document.getElementById('hiddenInput');
-    const typed  = document.getElementById('typed');
-    const log    = document.getElementById('log');
+<script>
+  const hidden = document.getElementById('hiddenInput');
+  const typed  = document.getElementById('typed');
+  const log    = document.getElementById('log');
+  const adminBox = document.getElementById('adminBox');
+  const adminOut = document.getElementById('adminOut');
 
-    const adminBox = document.getElementById('adminBox');
-    const adminOut = document.getElementById('adminOut');
-    const copyBtn  = document.getElementById('copyBtn');
-    const closeAdminBtn = document.getElementById('closeAdminBtn');
+  const RESP_DELAY_MS = 1200 + Math.random() * 600;
 
-    // ---------- Helpers
-    function escapeHtml(s){
-      return (s || '').replace(/[&<>"']/g, m => ({
-        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-      }[m]));
-    }
+  function escapeHtml(s){
+    return (s||"").replace(/[&<>"']/g,m=>({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[m]));
+  }
 
-    function addLine(who, text){
-      const div = document.createElement('div');
-      div.className = 'chatLine';
-      div.innerHTML = `<span class="who">${escapeHtml(who)}</span>${escapeHtml(text)}`;
-      log.appendChild(div);
-      log.scrollTop = log.scrollHeight;
-    }
+  function addLine(who,text){
+    const d=document.createElement('div');
+    d.className='chatLine';
+    d.innerHTML=`<span class="who">${escapeHtml(who)}</span>${escapeHtml(text)}`;
+    log.appendChild(d);
+    log.scrollTop=log.scrollHeight;
+    return d;
+  }
 
-    function normalize(s){
-      return (s || "")
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9]+/g, " ")
-        .trim();
-    }
+  function addThinkingLine(){
+    return addLine("néa ▮","…");
+  }
 
-    // Abbr map (extensible)
-    const ABBR = new Map([
-      ["cmnt","comment"],
-      ["pk","pourquoi"],
-      ["pq","pourquoi"],
-      ["stp","s il te plait"],
-      ["svp","s il vous plait"],
-      ["t1","tome 1"],
-      ["tome1","tome 1"],
-      ["tomei","tome 1"]
-    ]);
+  function replaceLine(div,who,text){
+    div.innerHTML=`<span class="who">${escapeHtml(who)}</span>${escapeHtml(text)}`;
+  }
 
-    function expandAbbr(norm){
-      const words = norm.split(/\s+/g).filter(Boolean);
-      const out = [];
-      for (const w of words) out.push(ABBR.get(w) || w);
-      return out.join(" ").replace(/\s+/g," ").trim();
-    }
+  function normalize(s){
+    return (s||"").toLowerCase().normalize("NFD")
+      .replace(/[\u0300-\u036f]/g,"")
+      .replace(/[^a-z0-9]+/g," ").trim();
+  }
 
-    // Similarité Jaccard (mots)
-    function jaccard(a, b){
-      const A = new Set(a.split(/\s+/g).filter(Boolean));
-      const B = new Set(b.split(/\s+/g).filter(Boolean));
-      if (A.size === 0 && B.size === 0) return 1;
-      let inter = 0;
-      for (const x of A) if (B.has(x)) inter++;
-      const union = A.size + B.size - inter;
-      return union === 0 ? 0 : inter / union;
-    }
-
-    // Levenshtein léger -> score [0..1]
-    function levScore(a, b){
-      if (a === b) return 1;
-      if (!a || !b) return 0;
-
-      const m = a.length, n = b.length;
-      const dp = new Array(n + 1);
-      for (let j = 0; j <= n; j++) dp[j] = j;
-
-      for (let i = 1; i <= m; i++){
-        let prev = dp[0];
-        dp[0] = i;
-        for (let j = 1; j <= n; j++){
-          const tmp = dp[j];
-          const cost = a[i-1] === b[j-1] ? 0 : 1;
-          dp[j] = Math.min(dp[j] + 1, dp[j-1] + 1, prev + cost);
-          prev = tmp;
-        }
+  function bestMatch(q){
+    const u=normalize(q);
+    let best=null,score=0;
+    for(const it of (window.QA_BASE||[])){
+      const all=[it.q,...(it.aliases||[])];
+      for(const c of all){
+        const cn=normalize(c);
+        const s=cn===u?1:(u.includes(cn)||cn.includes(u)?0.85:0);
+        if(s>score){score=s;best=it;}
       }
-
-      const dist = dp[n];
-      const maxLen = Math.max(m, n);
-      return maxLen === 0 ? 1 : (1 - dist / maxLen);
     }
+    return score>=0.78?best:null;
+  }
 
-    function bestMatch(userRaw){
-      const base = (window.QA_BASE && Array.isArray(window.QA_BASE)) ? window.QA_BASE : [];
-      const u = expandAbbr(normalize(userRaw));
-
-      let best = null;
-      let bestScore = -1;
-
-      for (const item of base){
-        const candidates = [];
-        if (item && typeof item.q === "string") candidates.push(item.q);
-        if (item && Array.isArray(item.aliases)) candidates.push(...item.aliases);
-
-        for (const c of candidates){
-          const cn = expandAbbr(normalize(c));
-          const s1 = levScore(u.replace(/\s+/g,""), cn.replace(/\s+/g,""));
-          const s2 = jaccard(u, cn);
-          const score = Math.max(s1, s2);
-
-          if (score > bestScore){
-            bestScore = score;
-            best = { item, score, matched: c };
-          }
-        }
+  function handleMessage(msg){
+    const thinking=addThinkingLine();
+    setTimeout(()=>{
+      const hit=bestMatch(msg);
+      if(hit){
+        replaceLine(thinking,"néa ▮",hit.a);
+      }else{
+        replaceLine(thinking,"néa ▮","Je ne sais pas.");
+        setTimeout(()=>{
+          addLine("néa ▮","Échap. Crée la fiche. Et je saurai la prochaine fois.");
+          adminOut.value=JSON.stringify({
+            q:msg,aliases:[],a:"TODO",tags:[],updatedAt:new Date().toISOString()
+          },null,2);
+        },400);
       }
+    },RESP_DELAY_MS);
+  }
 
-      return best ? best : { item:null, score:0, matched:null };
+  document.addEventListener("click",()=>hidden.focus());
+  hidden.addEventListener("input",()=>typed.textContent=hidden.value);
+
+  hidden.addEventListener("keydown",e=>{
+    if(e.key==="Enter"){
+      e.preventDefault();
+      const msg=hidden.value.trim();
+      if(!msg)return;
+      addLine("lecteur ▮",msg);
+      hidden.value="";typed.textContent="";
+      handleMessage(msg);
     }
-
-    const THRESHOLD = 0.78;
-
-    function buildQaSnippet(questionRaw){
-      const q = (questionRaw || "").trim();
-      const now = new Date().toISOString();
-      return JSON.stringify({
-        q,
-        aliases: [],
-        a: "TODO: réponse canonique (voix de Néa).",
-        tags: [],
-        updatedAt: now
-      }, null, 2);
+    if(e.key==="Escape"){
+      adminBox.style.display=adminBox.style.display==="block"?"none":"block";
     }
+  });
 
-    function showAdmin(snippet){
-      adminOut.value = snippet;
-      adminBox.style.display = "block";
-      adminOut.scrollTop = 0;
-    }
-    function hideAdmin(){
-      adminBox.style.display = "none";
-      adminOut.value = "";
-    }
-
-    // ---------- Behavior
-    addLine("néa ▮", "Pose ta question.");
-    addLine("néa ▮", "Je réponds avec ce que j’ai dans mon noyau (Tome I).");
-
-    function handleMessage(msg){
-      const hit = bestMatch(msg);
-
-      if (hit.item && hit.score >= THRESHOLD){
-        const answer = (hit.item.a || "").trim() || "…";
-        addLine("néa ▮", answer);
-        return;
-      }
-
-      addLine("néa ▮", "Je ne sais pas.");
-      addLine("néa ▮", "Échap. Crée la fiche. Et je saurai la prochaine fois.");
-      adminOut.value = buildQaSnippet(msg);
-    }
-
-    // ---------- Focus (béton)
-    function focusChat(){
-      try{ hidden.focus(); } catch {}
-    }
-
-    window.addEventListener("load", () => {
-      setTimeout(focusChat, 120);
-    });
-
-    document.addEventListener("mousedown", (e) => {
-      // Empêche que la page prenne un autre focus parasite
-      // et remet le focus sur l'input caché.
-      focusChat();
-    }, { passive: true });
-
-    document.addEventListener("click", () => focusChat());
-
-    hidden.addEventListener("input", () => {
-      typed.textContent = hidden.value;
-    });
-
-    hidden.addEventListener("keydown", (e) => {
-      if (e.key === "Escape"){
-        e.preventDefault();
-        if (adminBox.style.display === "block") hideAdmin();
-        else showAdmin(adminOut.value || buildQaSnippet(""));
-        return;
-      }
-
-      if (e.key === "Enter"){
-        e.preventDefault();
-        const msg = hidden.value;
-        if (!msg.trim()) return;
-
-        addLine("lecteur ▮", msg);
-        hidden.value = "";
-        typed.textContent = "";
-
-        handleMessage(msg);
-      }
-    });
-
-    copyBtn.addEventListener("click", async () => {
-      try{
-        await navigator.clipboard.writeText(adminOut.value || "");
-        addLine("néa ▮", "Copié.");
-      } catch {
-        addLine("néa ▮", "Impossible de copier automatiquement. Sélectionne puis copie manuellement.");
-      }
-    });
-
-    closeAdminBtn.addEventListener("click", () => hideAdmin());
-  </script>
+  addLine("néa ▮","Pose ta question.");
+</script>
 </body>
 </html>
-
-
