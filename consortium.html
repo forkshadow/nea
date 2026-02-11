@@ -340,7 +340,7 @@ function hideAdmin(){
 let isTyping = false;
 let activeTyping = null; // state
 let isBanned = false;
-let awaitingYesNo = false;
+
 
 function clearTimer(state){
   if (state && state.timer){
@@ -588,16 +588,6 @@ function isAckMessage(text){
   if (ACK_INPUTS.some(x => n === normalize(x))) return true;
   if (n.length <= 18 && ACK_INPUTS.some(x => n.includes(normalize(x)))) return true;
   return false;
-}
-
-function isYesMsg(msg){
-  const n = normalize(msg);
-  return ["oui","ouais","yeah","yes","si","ok"].includes(n);
-}
-
-function isNoMsg(msg){
-  const n = normalize(msg);
-  return ["non","nan","no","nop"].includes(n);
 }
 
 function setAwaitingFromAnswer(answer){
