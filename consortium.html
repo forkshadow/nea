@@ -1,510 +1,477 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Consortium</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Consortium</title>
 
-  <style>
-    :root{
-      --bg:#000;
-      --fg:#fff;
-      --muted: rgba(255,255,255,.55);
-      --soft: rgba(255,255,255,.10);
-      --soft2: rgba(255,255,255,.16);
-      --fs: 22px;
-      --barW: 14px;
-      --barH: 26px;
-      --gap: 10px;
-    }
+<style>
+  :root{
+    --bg:#000;
+    --fg:#fff;
+    --muted: rgba(255,255,255,.55);
+    --soft: rgba(255,255,255,.10);
+    --soft2: rgba(255,255,255,.16);
+    --fs: 22px;
+    --barW: 14px;
+    --barH: 26px;
+    --gap: 10px;
+  }
 
-    html, body{
-      margin:0; padding:0; width:100%; height:100%;
-      background:var(--bg); color:var(--fg);
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      overflow:hidden;
-    }
+  html, body{
+    margin:0; padding:0; width:100%; height:100%;
+    background:var(--bg); color:var(--fg);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    overflow:hidden;
+  }
 
-    #hiddenInput{
-      position:absolute; left:-9999px; opacity:0;
-    }
+  #hiddenInput{ position:absolute; left:-9999px; opacity:0; }
 
-    #stage{
-      height:100%;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:28px;
-      box-sizing:border-box;
-    }
+  #stage{
+    height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:28px;
+    box-sizing:border-box;
+  }
 
-    #panel{
-      width:min(960px, 94vw);
-    }
+  #panel{ width:min(960px, 94vw); }
 
-    #intro{
-      border:1px solid var(--soft);
-      border-radius:14px;
-      padding:18px 16px;
-      background: rgba(255,255,255,.02);
-      margin-bottom:18px;
-    }
+  #intro{
+    border:1px solid var(--soft);
+    border-radius:14px;
+    padding:18px 16px;
+    background: rgba(255,255,255,.02);
+    margin-bottom:18px;
+  }
 
-    .line{
-      margin:10px 0;
-      line-height:1.55;
-      opacity:.96;
-      white-space: pre-wrap;
-    }
+  .line{
+    margin:10px 0;
+    line-height:1.55;
+    opacity:.96;
+    white-space: pre-wrap;
+  }
 
-    .neaTag{ opacity:.75; }
+  .neaTag{ opacity:.75; }
 
-    #chat{
-      border:1px solid var(--soft);
-      border-radius:14px;
-      padding:16px 14px;
-      background: rgba(255,255,255,.02);
-    }
+  #chat{
+    border:1px solid var(--soft);
+    border-radius:14px;
+    padding:16px 14px;
+    background: rgba(255,255,255,.02);
+  }
 
-    #log{
-      min-height: 200px;
-      max-height: 46vh;
-      overflow:auto;
-      padding: 0 2px 14px 2px;
-      box-sizing:border-box;
-      line-height: 1.4;
-      font-size: 16px;
-      opacity: .92;
-    }
+  #log{
+    min-height: 200px;
+    max-height: 46vh;
+    overflow:auto;
+    padding: 0 2px 14px 2px;
+    box-sizing:border-box;
+    line-height: 1.4;
+    font-size: 16px;
+    opacity: .92;
+  }
 
-    .chatLine{ margin: 10px 0; white-space: pre-wrap; }
-    .who{ opacity:.60; margin-right:8px; }
+  .chatLine{ margin: 10px 0; white-space: pre-wrap; }
+  .who{ opacity:.60; margin-right:8px; }
 
-    #row{
-      display:flex;
-      align-items:center;
-      gap: var(--gap);
-      border-top:1px solid rgba(255,255,255,.10);
-      padding-top:10px;
-      margin-top:10px;
-    }
+  #row{
+    display:flex;
+    align-items:center;
+    gap: var(--gap);
+    border-top:1px solid rgba(255,255,255,.10);
+    padding-top:10px;
+    margin-top:10px;
+  }
 
-    #typed{
-      font-size: var(--fs);
-      white-space: pre-wrap;
-      word-break: break-word;
-      min-height: var(--barH);
-      flex: 1 1 auto;
-    }
+  #typed{
+    font-size: var(--fs);
+    white-space: pre-wrap;
+    word-break: break-word;
+    min-height: var(--barH);
+    flex: 1 1 auto;
+  }
 
-    #cursor{
-      width: var(--barW);
-      height: var(--barH);
-      background: var(--fg);
-      display:inline-block;
-      transform: translateY(2px);
-      animation: blink 1s steps(1) infinite;
-    }
+  #cursor{
+    width: var(--barW);
+    height: var(--barH);
+    background: var(--fg);
+    display:inline-block;
+    transform: translateY(2px);
+    animation: blink 1s steps(1) infinite;
+  }
 
-    @keyframes blink{ 50%{ opacity:0; } }
+  @keyframes blink{ 50%{ opacity:0; } }
 
-    #hint{
-      margin-top: 12px;
-      font-size: 12px;
-      opacity: .38;
-      user-select:none;
-    }
+  #hint{
+    margin-top: 12px;
+    font-size: 12px;
+    opacity: .38;
+    user-select:none;
+  }
 
-    #adminBox{
-      display:none;
-      margin-top:14px;
-      border-top:1px solid rgba(255,255,255,.10);
-      padding-top:14px;
-    }
+  #adminBox{
+    display:none;
+    margin-top:14px;
+    border-top:1px solid rgba(255,255,255,.10);
+    padding-top:14px;
+  }
 
-    #adminLabel{
-      font-size:12px;
-      opacity:.55;
-      margin-bottom:8px;
-    }
+  #adminLabel{
+    font-size:12px;
+    opacity:.55;
+    margin-bottom:8px;
+  }
 
-    #adminOut{
-      width:100%;
-      background:#000;
-      color:#fff;
-      border:1px solid rgba(255,255,255,.2);
-      padding:12px;
-      font-family: inherit;
-      font-size:13px;
-      box-sizing:border-box;
-      min-height:120px;
-      resize:vertical;
-      white-space: pre-wrap;
-    }
+  #adminOut{
+    width:100%;
+    background:#000;
+    color:#fff;
+    border:1px solid rgba(255,255,255,.2);
+    padding:12px;
+    font-family: inherit;
+    font-size:13px;
+    box-sizing:border-box;
+    min-height:120px;
+    resize:vertical;
+    white-space: pre-wrap;
+  }
 
-    .btnRow{
-      margin-top:10px;
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-    }
+  .btnRow{
+    margin-top:10px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
 
-    button{
-      background: rgba(255,255,255,.06);
-      color:#fff;
-      border:1px solid rgba(255,255,255,.18);
-      padding:8px 10px;
-      border-radius:10px;
-      font-family: inherit;
-      font-size:12px;
-      cursor:pointer;
-      opacity:.92;
-    }
-    button:hover{ opacity:1; background: rgba(255,255,255,.10); }
-  </style>
+  button{
+    background: rgba(255,255,255,.06);
+    color:#fff;
+    border:1px solid rgba(255,255,255,.18);
+    padding:8px 10px;
+    border-radius:10px;
+    font-family: inherit;
+    font-size:12px;
+    cursor:pointer;
+    opacity:.92;
+  }
+  button:hover{ opacity:1; background: rgba(255,255,255,.10); }
+</style>
 </head>
 
 <body>
 <input id="hiddenInput" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"/>
 
 <div id="stage">
-  <div id="panel">
+<div id="panel">
 
-    <div id="intro">
-      <div class="line"><span class="neaTag">néa ▮</span> Tu es arrivé jusqu’ici.</div>
-      <div class="line"><span class="neaTag">néa ▮</span> Bravo.</div>
-      <div class="line"><span class="neaTag">néa ▮</span> Si quelque chose t’échappe, pose ta question.</div>
-    </div>
-
-    <div id="chat">
-      <div id="log"></div>
-
-      <div id="row">
-        <div id="typed"></div>
-        <span id="cursor"></span>
-      </div>
-
-      <div id="hint">Entrée pour envoyer • Clique pour activer • Échap : mode Auteur</div>
-
-      <div id="adminBox">
-        <div id="adminLabel">Mode Auteur — à copier dans <code>qa.js</code></div>
-        <textarea id="adminOut" readonly></textarea>
-        <div class="btnRow">
-          <button id="copyBtn" type="button">Copier</button>
-          <button id="closeAdminBtn" type="button">Fermer</button>
-        </div>
-      </div>
-    </div>
-
+  <div id="intro">
+    <div class="line"><span class="neaTag">néa ▮</span> Tu es arrivé jusqu’ici.</div>
+    <div class="line"><span class="neaTag">néa ▮</span> Bravo.</div>
+    <div class="line"><span class="neaTag">néa ▮</span> Si quelque chose t’échappe, pose ta question.</div>
   </div>
+
+  <div id="chat">
+    <div id="log"></div>
+
+    <div id="row">
+      <div id="typed"></div>
+      <span id="cursor"></span>
+    </div>
+
+    <div id="hint">Entrée pour envoyer • Clique pour activer • Échap : mode Auteur</div>
+
+    <div id="adminBox">
+      <div id="adminLabel">Mode Auteur — à copier dans <code>qa.js</code></div>
+      <textarea id="adminOut" readonly></textarea>
+      <div class="btnRow">
+        <button id="copyBtn" type="button">Copier</button>
+        <button id="closeAdminBtn" type="button">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+</div>
 </div>
 
 <script src="qa.js"></script>
 
 <script>
-  const hidden = document.getElementById('hiddenInput');
-  const typed  = document.getElementById('typed');
-  const log    = document.getElementById('log');
-  const adminBox = document.getElementById('adminBox');
-  const adminOut = document.getElementById('adminOut');
-  const copyBtn  = document.getElementById('copyBtn');
-  const closeAdminBtn = document.getElementById('closeAdminBtn');
+const hidden = document.getElementById('hiddenInput');
+const typed  = document.getElementById('typed');
+const log    = document.getElementById('log');
+const adminBox = document.getElementById('adminBox');
+const adminOut = document.getElementById('adminOut');
+const copyBtn  = document.getElementById('copyBtn');
+const closeAdminBtn = document.getElementById('closeAdminBtn');
 
-  function respDelayMs(){
-    return 1200 + Math.random() * 600; // à garder
-  }
+function respDelayMs(){ return 1200 + Math.random() * 600; } // à garder
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
 
-  function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
-  function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+function escapeHtml(s){
+  return (s||"").replace(/[&<>"']/g,m=>({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[m]));
+}
 
-  function escapeHtml(s){
-    return (s||"").replace(/[&<>"']/g,m=>({
-      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-    }[m]));
-  }
+function addLine(who,text){
+  const d=document.createElement('div');
+  d.className='chatLine';
+  d.innerHTML=`<span class="who">${escapeHtml(who)}</span>${escapeHtml(text)}`;
+  log.appendChild(d);
+  log.scrollTop=log.scrollHeight;
+  return d;
+}
 
-  function addLine(who,text){
-    const d=document.createElement('div');
-    d.className='chatLine';
-    d.innerHTML=`<span class="who">${escapeHtml(who)}</span>${escapeHtml(text)}`;
-    log.appendChild(d);
-    log.scrollTop=log.scrollHeight;
-    return d;
-  }
+function addThinkingLine(){
+  return addLine("néa ▮","…");
+}
 
-  function addThinkingLine(){
-    return addLine("néa ▮","…");
-  }
+// 15 recadrages
+const WAIT_SNARK = [
+  "Ai au moins la politesse d’attendre que je termine.",
+  "Deux secondes. Laisse-moi finir.",
+  "Tu peux taper, oui. Envoyer, non. Pas encore.",
+  "Patience. Je suis en train d’écrire.",
+  "On fait ça proprement: tu attends la fin de ma réponse.",
+  "Je n’ai pas encore posé le point final.",
+  "Tu vois le curseur ? Il travaille. Toi, tu attends.",
+  "Tu veux vraiment m’interrompre au milieu d’une phrase ?",
+  "Respire. Je termine. Ensuite c’est à toi.",
+  "Tu vas trop vite. Laisse-moi finir mon idée.",
+  "Je réponds. Après, je t’écoute.",
+  "Encore une seconde et je te rends la parole.",
+  "Pas d’empilement. Un à la fois.",
+  "Prépare ta question… mais attends que je conclue.",
+  "Si tu insistes, je clignote plus fort."
+];
 
-  // 15 recadrages
-  const WAIT_SNARK = [
-    "Ai au moins la politesse d’attendre que je termine.",
-    "Deux secondes. Laisse-moi finir.",
-    "Tu peux taper, oui. Envoyer, non. Pas encore.",
-    "Patience. Je suis en train d’écrire.",
-    "On fait ça proprement: tu attends la fin de ma réponse.",
-    "Je n’ai pas encore posé le point final.",
-    "Tu vois le curseur ? Il travaille. Toi, tu attends.",
-    "Tu veux vraiment m’interrompre au milieu d’une phrase ?",
-    "Respire. Je termine. Ensuite c’est à toi.",
-    "Tu vas trop vite. Laisse-moi finir mon idée.",
-    "Je réponds. Après, je t’écoute.",
-    "Encore une seconde et je te rends la parole.",
-    "Pas d’empilement. Un à la fois.",
-    "Prépare ta question… mais attends que je conclue.",
-    "Si tu insistes, je clignote plus fort."
-  ];
+// 15 reprises
+const RESUME_PHRASES = [
+  "Où j’en étais déjà ? Ah oui. Donc, je disais: ",
+  "Où j’en étais… voilà. Donc je disais: ",
+  "Je reprends. Donc je disais: ",
+  "Recentrons. Donc je disais: ",
+  "Très bien. On reprend. Donc je disais: ",
+  "Bref. Donc je disais: ",
+  "Je reprends au bon endroit. Donc je disais: ",
+  "On continue calmement. Donc je disais: ",
+  "Là. Voilà. Donc je disais: ",
+  "Je remets le fil. Donc je disais: ",
+  "On revient au sujet. Donc je disais: ",
+  "Sans couper, maintenant. Donc je disais: ",
+  "Je termine mon idée. Donc je disais: ",
+  "Je reprends ma phrase. Donc je disais: ",
+  "Allez. Donc je disais: "
+];
 
-  // 15 reprises
-  const RESUME_PHRASES = [
-    "Où j’en étais déjà ? Ah oui. Donc, je disais: ",
-    "Où j’en étais… voilà. Donc je disais: ",
-    "Je reprends. Donc je disais: ",
-    "Recentrons. Donc je disais: ",
-    "Très bien. On reprend. Donc je disais: ",
-    "Bref. Donc je disais: ",
-    "Je reprends au bon endroit. Donc je disais: ",
-    "On continue calmement. Donc je disais: ",
-    "Là. Voilà. Donc je disais: ",
-    "Je remets le fil. Donc je disais: ",
-    "On revient au sujet. Donc je disais: ",
-    "Sans couper, maintenant. Donc je disais: ",
-    "Je termine mon idée. Donc je disais: ",
-    "Je reprends ma phrase. Donc je disais: ",
-    "Allez. Donc je disais: "
-  ];
+// 15 fins "tu peux parler maintenant"
+const YOU_CAN_SPEAK = [
+  "Voilà. J’ai terminé. Tu peux parler maintenant.",
+  "C’est bon pour moi. À toi.",
+  "Terminé. Je t’écoute.",
+  "Voilà, fin de réponse. Tu peux y aller.",
+  "J’ai fini. À ton tour.",
+  "Ok. J’ai posé le point final. Parle.",
+  "Je te rends la parole.",
+  "C’est tout. Tu peux envoyer ta question.",
+  "Voilà. Maintenant, c’est ton moment.",
+  "J’ai fini d’écrire. À toi de jouer.",
+  "Fin. Tu peux reprendre.",
+  "C’est bon. Je suis prête. Parle.",
+  "Voilà. Je me tais. À toi.",
+  "Réponse terminée. Tu peux parler.",
+  "J’ai terminé. On t’écoute."
+];
 
-  // 15 fins "tu peux parler maintenant"
-  const YOU_CAN_SPEAK = [
-    "Voilà. J’ai terminé. Tu peux parler maintenant.",
-    "C’est bon pour moi. À toi.",
-    "Terminé. Je t’écoute.",
-    "Voilà, fin de réponse. Tu peux y aller.",
-    "J’ai fini. À ton tour.",
-    "Ok. J’ai posé le point final. Parle.",
-    "Je te rends la parole.",
-    "C’est tout. Tu peux envoyer ta question.",
-    "Voilà. Maintenant, c’est ton moment.",
-    "J’ai fini d’écrire. À toi de jouer.",
-    "Fin. Tu peux reprendre.",
-    "C’est bon. Je suis prête. Parle.",
-    "Voilà. Je me tais. À toi.",
-    "Réponse terminée. Tu peux parler.",
-    "J’ai terminé. On t’écoute."
-  ];
+// -----------------------------
+// Matching (simple)
+// -----------------------------
+function normalize(s){
+  return (s||"").toLowerCase().normalize("NFD")
+    .replace(/[\u0300-\u036f]/g,"")
+    .replace(/[^a-z0-9]+/g," ").trim();
+}
 
-  // -----------------------------
-  // Matching (simple)
-  // -----------------------------
-  function normalize(s){
-    return (s||"").toLowerCase().normalize("NFD")
-      .replace(/[\u0300-\u036f]/g,"")
-      .replace(/[^a-z0-9]+/g," ").trim();
-  }
+function bestMatch(q){
+  const base = (window.QA_BASE && Array.isArray(window.QA_BASE)) ? window.QA_BASE : [];
+  const u = normalize(q);
+  let best=null,score=0;
 
-  function bestMatch(q){
-    const base = (window.QA_BASE && Array.isArray(window.QA_BASE)) ? window.QA_BASE : [];
-    const u = normalize(q);
-    let best=null,score=0;
-
-    for(const it of base){
-      if (!it) continue;
-      const all=[it.q, ...(it.aliases||[])].filter(Boolean);
-      for(const c of all){
-        const cn=normalize(c);
-        const s = (cn===u) ? 1 : ((u.includes(cn)||cn.includes(u)) ? 0.85 : 0);
-        if(s>score){score=s;best=it;}
-      }
-    }
-    return score>=0.78 ? best : null;
-  }
-
-  function buildQaSnippet(questionRaw){
-    const q = (questionRaw || "").trim();
-    const now = new Date().toISOString();
-    return JSON.stringify({
-      q,
-      aliases: [],
-      a: "TODO: réponse canonique (voix de Néa).",
-      tags: [],
-      updatedAt: now
-    }, null, 2);
-  }
-
-  function showAdmin(snippet){
-    adminOut.value = snippet || "";
-    adminBox.style.display = "block";
-    adminOut.scrollTop = 0;
-  }
-  function hideAdmin(){
-    adminBox.style.display = "none";
-    adminOut.value = "";
-  }
-
-  // -----------------------------
-  // Typing engine (stable + interrupt)
-  // -----------------------------
-  let isTyping = false;
-
-  // state = { who, text, idx, div, timer, doneCb, interruptRequested, interruptStartIdx, cancelled }
-  let activeTyping = null;
-
-  function clearTimer(state){
-    if (state && state.timer){
-      clearTimeout(state.timer);
-      state.timer = null;
+  for(const it of base){
+    if (!it) continue;
+    const all=[it.q, ...(it.aliases||[])].filter(Boolean);
+    for(const c of all){
+      const cn=normalize(c);
+      const s = (cn===u) ? 1 : ((u.includes(cn)||cn.includes(u)) ? 0.85 : 0);
+      if(s>score){score=s;best=it;}
     }
   }
+  return score>=0.78 ? best : null;
+}
 
-  function renderTypingLine(state, shownText){
-    if (!state || !state.div) return;
-    state.div.innerHTML =
-      `<span class="who">${escapeHtml(state.who)}</span><span class="msg">${escapeHtml(shownText)}</span>`;
-    log.scrollTop = log.scrollHeight;
+function buildQaSnippet(questionRaw){
+  const q = (questionRaw || "").trim();
+  const now = new Date().toISOString();
+  return JSON.stringify({
+    q,
+    aliases: [],
+    a: "TODO: réponse canonique (voix de Néa).",
+    tags: [],
+    updatedAt: now
+  }, null, 2);
+}
+
+function showAdmin(snippet){
+  adminOut.value = snippet || "";
+  adminBox.style.display = "block";
+  adminOut.scrollTop = 0;
+}
+function hideAdmin(){
+  adminBox.style.display = "none";
+  adminOut.value = "";
+}
+
+// -----------------------------
+// Typing engine (stable + interrupt)
+// -----------------------------
+let isTyping = false;
+let activeTyping = null; // state
+let isBanned = false;
+
+function clearTimer(state){
+  if (state && state.timer){
+    clearTimeout(state.timer);
+    state.timer = null;
+  }
+}
+
+function renderTypingLine(state, shownText){
+  if (!state || !state.div) return;
+  state.div.innerHTML =
+    `<span class="who">${escapeHtml(state.who)}</span><span class="msg">${escapeHtml(shownText)}</span>`;
+  log.scrollTop = log.scrollHeight;
+}
+
+function startTypingLine(div, who, fullText, onDone){
+  if (activeTyping){
+    activeTyping.cancelled = true;
+    clearTimer(activeTyping);
   }
 
-  function startTypingLine(div, who, fullText, onDone){
-    // stoppe proprement tout ancien state
-    if (activeTyping){
-      activeTyping.cancelled = true;
-      clearTimer(activeTyping);
-    }
+  const state = {
+    who,
+    text: String(fullText ?? ""),
+    idx: 0,
+    div,
+    timer: null,
+    doneCb: (typeof onDone === "function") ? onDone : null,
+    interruptRequested: false,
+    interruptStartIdx: 0,
+    cancelled: false,
+    _interrupting: false
+  };
 
-    const state = {
-      who,
-      text: String(fullText ?? ""),
-      idx: 0,
-      div,
-      timer: null,
-      doneCb: (typeof onDone === "function") ? onDone : null,
-      interruptRequested: false,
-      interruptStartIdx: 0,
-      cancelled: false,
-      _interrupting: false
-    };
+  activeTyping = state;
+  isTyping = true;
 
-    activeTyping = state;
-    isTyping = true;
+  div.innerHTML = `<span class="who">${escapeHtml(who)}</span><span class="msg"></span>`;
+  scheduleStep(state);
+}
 
-    div.innerHTML = `<span class="who">${escapeHtml(who)}</span><span class="msg"></span>`;
-    scheduleStep(state);
+function scheduleStep(state){
+  if (!state || state.cancelled) return;
+
+  if (state.idx >= state.text.length){
+    isTyping = false;
+    activeTyping = null;
+    if (typeof state.doneCb === "function") state.doneCb();
+    return;
   }
 
-  function scheduleStep(state){
-    if (!state || state.cancelled) return;
+  const ch = state.text[state.idx];
+  const shown = state.text.slice(0, state.idx + 1);
+  renderTypingLine(state, shown);
+  state.idx++;
 
-    // fin
-    if (state.idx >= state.text.length){
-      isTyping = false;
-      activeTyping = null;
-      if (typeof state.doneCb === "function") state.doneCb();
+  if (state.interruptRequested && !state._interrupting){
+    const isGoodStop = ".!?…\n".includes(ch);
+    const tooFar = state.idx >= Math.min(state.text.length, state.interruptStartIdx + 140);
+
+    if (isGoodStop || tooFar){
+      clearTimer(state);
+      injectInterruptionFlow(state);
       return;
     }
-
-    const ch = state.text[state.idx];
-    const shown = state.text.slice(0, state.idx + 1);
-    renderTypingLine(state, shown);
-    state.idx++;
-
-    // interruption demandée: on coupe à une ponctuation, sinon après X chars
-    if (state.interruptRequested && !state._interrupting){
-      const isGoodStop = ".!?…\n".includes(ch);
-      const tooFar = state.idx >= Math.min(state.text.length, state.interruptStartIdx + 140);
-
-      if (isGoodStop || tooFar){
-        clearTimer(state);
-        injectInterruptionFlow(state);
-        return;
-      }
-    }
-
-    let extra = 0;
-    if (".!?…".includes(ch)) extra = 180 + Math.random()*180;
-    if (",;:".includes(ch))  extra = 90 + Math.random()*120;
-    if (ch === "\n")         extra = 120 + Math.random()*120;
-
-    const base = 12 + Math.random() * 55;
-
-    clearTimer(state);
-    state.timer = setTimeout(() => scheduleStep(state), base + extra);
   }
 
-  async function injectInterruptionFlow(state){
-    if (!state || state._interrupting || state.cancelled) return;
-    state._interrupting = true;
+  let extra = 0;
+  if (".!?…".includes(ch)) extra = 180 + Math.random()*180;
+  if (",;:".includes(ch))  extra = 90 + Math.random()*120;
+  if (ch === "\n")         extra = 120 + Math.random()*120;
 
-    clearTimer(state);
+  const base = 12 + Math.random() * 55;
 
-    const full = state.text;
-    let cutIdx = state.idx;
+  clearTimer(state);
+  state.timer = setTimeout(() => scheduleStep(state), base + extra);
+}
 
-    // tenter de recaler sur une ponctuation imminente
-    const lookAhead = full.slice(cutIdx, cutIdx + 160);
-    const m = lookAhead.match(/[.!?…]\s|\n/);
-    if (m && m.index != null){
-      cutIdx = cutIdx + m.index + 1;
-    }
+async function injectInterruptionFlow(state){
+  if (!state || state._interrupting || state.cancelled) return;
+  state._interrupting = true;
 
-    const before = full.slice(0, cutIdx).trimEnd();
-    let remaining = full.slice(cutIdx).replace(/^\s+/, "");
+  clearTimer(state);
 
-    // 1) termine la ligne courante par "…"
-    const line1 = before;
-    state.text = line1;
-    state.idx = line1.length;
-    renderTypingLine(state, line1);
+  const full = state.text;
+  let cutIdx = state.idx;
 
-    // on coupe l’ancien state définitivement
-    state.cancelled = true;
-    activeTyping = null;
+  const lookAhead = full.slice(cutIdx, cutIdx + 160);
+  const m = lookAhead.match(/[.!?…]\s|\n/);
+  if (m && m.index != null){
+    cutIdx = cutIdx + m.index + 1;
+  }
 
-    // 2) pause
+  const before = full.slice(0, cutIdx).trimEnd();
+  let remaining = full.slice(cutIdx).replace(/^\s+/, "");
+
+  // Pas de "..." ajoutés (comme tu voulais)
+  state.text = before;
+  state.idx = before.length;
+  renderTypingLine(state, before);
+
+  state.cancelled = true;
+  activeTyping = null;
+
+  await sleep(1500);
+
+  const reprimandDiv = addLine("néa ▮", "");
+  startTypingLine(reprimandDiv, "néa ▮", pick(WAIT_SNARK), async () => {
     await sleep(1500);
 
-    // 3) réprimande
-    const reprimandDiv = addLine("néa ▮", "");
-    startTypingLine(reprimandDiv, "néa ▮", pick(WAIT_SNARK), async () => {
-
-      await sleep(1500);
-
-      // 4) reprise
-      const resumeDiv = addLine("néa ▮", "");
-      startTypingLine(resumeDiv, "néa ▮", pick(RESUME_PHRASES), () => {
-
-        // 5) suite
-        const contDiv = addLine("néa ▮", "");
-        startTypingLine(contDiv, "néa ▮", remaining, () => {
-
-          // 6) fin "tu peux parler"
-          const endDiv = addLine("néa ▮", "");
-          startTypingLine(endDiv, "néa ▮", pick(YOU_CAN_SPEAK), () => {
-            // fini, lecteur peut reparler
-          });
-
-        });
+    const resumeDiv = addLine("néa ▮", "");
+    startTypingLine(resumeDiv, "néa ▮", pick(RESUME_PHRASES), () => {
+      const contDiv = addLine("néa ▮", "");
+      startTypingLine(contDiv, "néa ▮", remaining, () => {
+        const endDiv = addLine("néa ▮", "");
+        startTypingLine(endDiv, "néa ▮", pick(YOU_CAN_SPEAK), () => {});
       });
     });
-  }
+  });
+}
 
-  function requestInterruption(){
-    if (!activeTyping || activeTyping.cancelled) return;
-    if (!activeTyping.interruptRequested){
-      activeTyping.interruptRequested = true;
-      activeTyping.interruptStartIdx = activeTyping.idx;
-    }
+function requestInterruption(){
+  if (!activeTyping || activeTyping.cancelled) return;
+  if (!activeTyping.interruptRequested){
+    activeTyping.interruptRequested = true;
+    activeTyping.interruptStartIdx = activeTyping.idx;
   }
+}
 
-  // -----------------------------
-  // Behaviour / chat
-  // -----------------------------
-  function focusChat(){
-    try{ hidden.focus(); } catch {}
-  }
-  document.addEventListener("click", ()=>focusChat());
-  window.addEventListener("load", ()=>setTimeout(focusChat, 120));
-  hidden.addEventListener("input", ()=>typed.textContent=hidden.value);
-
-  // --- Modération: insultes
+// -----------------------------
+// Modération insultes
+// -----------------------------
 let insultCount = 0;
 
 const BANNED_WORDS = [
@@ -563,104 +530,106 @@ const POLITE_KICK = [
 
 function containsInsult(text){
   const n = normalize(text);
-  // match simple "contient" (suffit avec ta normalisation)
-  return BANNED_WORDS.some(w => n.includes(normalize(w)));
+  if (!n) return false;
+  const padded = " " + n + " ";
+  return BANNED_WORDS.some(w => padded.includes(" " + normalize(w) + " "));
 }
 
-
-  async function handleMessage(msg){
-
-// --- Filtre insultes (avant toute réponse "livre")
-if (containsInsult(msg)){
-  insultCount++;
-
-  // 1ère fois: avertissement
-  if (insultCount === 1){
-    const w = addLine("néa ▮", "");
-    // si tu as la frappe progressive: startTypingLine(w, "néa ▮", pick(POLITE_WARNINGS), ...)
-    // sinon:
-    addLine("néa ▮", pick(POLITE_WARNINGS));
-    return;
-  }
-
-  // 2e fois: kick (soft)
-  addLine("néa ▮", pick(POLITE_KICK));
-
-  // option: bloque les envois ensuite
-  // isTyping = true; // ou un flag "isBanned = true"
-  return;
+// -----------------------------
+// Behaviour / chat
+// -----------------------------
+function focusChat(){
+  try{ hidden.focus(); } catch {}
 }
-    {
+document.addEventListener("click", ()=>focusChat());
+window.addEventListener("load", ()=>setTimeout(focusChat, 120));
+hidden.addEventListener("input", ()=>typed.textContent=hidden.value);
 
-    
-    if (isTyping) return;
+async function handleMessage(msg){
+  if (isTyping) return;
+  if (isBanned) return;
 
-    try{
-      isTyping = true;
+  // Filtre insultes AVANT tout
+  if (containsInsult(msg)){
+    insultCount++;
 
-      const thinkingEl = addThinkingLine();
-      await sleep(respDelayMs());
-
-      const hit = bestMatch(msg);
-      const answer = hit ? ((hit.a || "").trim() || "…") : "Je ne sais pas.";
-
-      startTypingLine(thinkingEl, "néa ▮", answer, () => {
-        if (!hit){
-          const l2 = addLine("néa ▮", "");
-          startTypingLine(l2, "néa ▮", "Échap. Crée la fiche. Et je saurai la prochaine fois.", () => {
-            adminOut.value = buildQaSnippet(msg);
-          });
-        } else {
-          // réponse trouvée: on peut précharger adminOut vide ou laisser tel quel
-        }
-      });
-
-    } catch (err){
-      addLine("néa ▮", "Erreur JS. Ouvre la console (F12) et copie l’erreur ici.");
-      console.error(err);
-      isTyping = false;
-      activeTyping = null;
-    }
-  }
-
-  hidden.addEventListener("keydown", (e)=>{
-    if (e.key === "Enter"){
-      e.preventDefault();
-
-      // si Néa parle: interruption (le message du lecteur n'est pas enregistré)
-      if (isTyping){
-        requestInterruption();
-        return;
-      }
-
-      const msg = hidden.value.trim();
-      if(!msg) return;
-
-      addLine("lecteur ▮", msg);
-      hidden.value=""; typed.textContent="";
-      handleMessage(msg);
+    if (insultCount === 1){
+      const w = addLine("néa ▮", "");
+      startTypingLine(w, "néa ▮", pick(POLITE_WARNINGS), () => {});
       return;
     }
 
-    if (e.key === "Escape"){
-      e.preventDefault();
-      if (adminBox.style.display === "block") hideAdmin();
-      else showAdmin(adminOut.value || buildQaSnippet(""));
+    const k = addLine("néa ▮", "");
+    startTypingLine(k, "néa ▮", pick(POLITE_KICK), () => {
+      isBanned = true;
+    });
+    return;
+  }
+
+  try{
+    isTyping = true;
+
+    const thinkingEl = addThinkingLine();
+    await sleep(respDelayMs());
+
+    const hit = bestMatch(msg);
+    const answer = hit ? ((hit.a || "").trim() || "…") : "Je ne sais pas.";
+
+    startTypingLine(thinkingEl, "néa ▮", answer, () => {
+      if (!hit){
+        const l2 = addLine("néa ▮", "");
+        startTypingLine(l2, "néa ▮", "Échap. Crée la fiche. Et je saurai la prochaine fois.", () => {
+          adminOut.value = buildQaSnippet(msg);
+        });
+      }
+    });
+
+  } catch (err){
+    addLine("néa ▮", "Erreur JS. Ouvre la console (F12) et copie l’erreur ici.");
+    console.error(err);
+    isTyping = false;
+    activeTyping = null;
+  }
+}
+
+hidden.addEventListener("keydown", (e)=>{
+  if (e.key === "Enter"){
+    e.preventDefault();
+
+    // si Néa parle: interruption (sans enregistrer)
+    if (isTyping){
+      requestInterruption();
+      return;
     }
-  });
 
-  copyBtn.addEventListener("click", async () => {
-    try{
-      await navigator.clipboard.writeText(adminOut.value || "");
-      addLine("néa ▮", "Copié.");
-    } catch {
-      addLine("néa ▮", "Impossible de copier automatiquement. Sélectionne puis copie manuellement.");
-    }
-  });
+    if (isBanned) return;
 
-  closeAdminBtn.addEventListener("click", () => hideAdmin());
+    const msg = hidden.value.trim();
+    if(!msg) return;
 
-  // ❌ supprimé: addLine("néa ▮","Pose ta question."); (tu l’avais déjà au-dessus)
+    addLine("lecteur ▮", msg);
+    hidden.value=""; typed.textContent="";
+    handleMessage(msg);
+    return;
+  }
+
+  if (e.key === "Escape"){
+    e.preventDefault();
+    if (adminBox.style.display === "block") hideAdmin();
+    else showAdmin(adminOut.value || buildQaSnippet(""));
+  }
+});
+
+copyBtn.addEventListener("click", async () => {
+  try{
+    await navigator.clipboard.writeText(adminOut.value || "");
+    addLine("néa ▮", "Copié.");
+  } catch {
+    addLine("néa ▮", "Impossible de copier automatiquement. Sélectionne puis copie manuellement.");
+  }
+});
+
+closeAdminBtn.addEventListener("click", () => hideAdmin());
 </script>
 </body>
 </html>
