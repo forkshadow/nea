@@ -162,7 +162,7 @@
 </head>
 
 <body>
-<input id="hiddenInput" type="text" />
+<input id="hiddenInput" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"/>
 
 <div id="stage">
   <div id="panel">
@@ -187,8 +187,8 @@
         <div id="adminLabel">Mode Auteur — à copier dans <code>qa.js</code></div>
         <textarea id="adminOut" readonly></textarea>
         <div class="btnRow">
-          <button id="copyBtn">Copier</button>
-          <button id="closeAdminBtn">Fermer</button>
+          <button id="copyBtn" type="button">Copier</button>
+          <button id="closeAdminBtn" type="button">Fermer</button>
         </div>
       </div>
     </div>
@@ -196,6 +196,7 @@
   </div>
 </div>
 
+<!-- Base Q/R -->
 <script src="qa.js"></script>
 
 <script>
@@ -204,9 +205,13 @@
   const log    = document.getElementById('log');
   const adminBox = document.getElementById('adminBox');
   const adminOut = document.getElementById('adminOut');
+  const copyBtn  = document.getElementById('copyBtn');
+  const closeAdminBtn = document.getElementById('closeAdminBtn');
 
+  // IMPORTANT: on garde ton délai initial tel quel (même formule)
   const RESP_DELAY_MS = 1200 + Math.random() * 600;
 
+  // ---------------- Helpers
   function escapeHtml(s){
     return (s||"").replace(/[&<>"']/g,m=>({
       '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -222,12 +227,40 @@
     return d;
   }
 
+  // petite ligne "…" pendant la réflexion
   function addThinkingLine(){
     return addLine("néa ▮","…");
   }
 
-  function replaceLine(div,who,text){
-    div.innerHTML=`<span class="who">${escapeHtml(who)}</span>${escapeHtml(text)}`;
+  function rand(min, max){
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+  function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+  // frappe progressive dans UNE ligne déjà créée
+  async function typeIntoLine(div, who, text){
+    // recompose la ligne avec un span message vide
+    div.innerHTML = `<span class="who">${escapeHtml(who)}</span><span class="msg"></span>`;
+    const msgEl = div.querySelector(".msg");
+    const raw = (text ?? "").toString();
+
+    // vitesse variable
+    const cps = rand(24, 40);                  // chars/sec
+    const baseStep = Math.max(10, Math.floor(1000 / cps));
+    const punctPauseMs = 220;
+
+    for (let i = 0; i < raw.length; i++){
+      msgEl.textContent += raw[i];
+      log.scrollTop = log.scrollHeight;
+
+      const ch = raw[i];
+      let extra = 0;
+      if (".!?…".includes(ch)) extra = punctPauseMs + rand(0, 180);
+      if (",;:".includes(ch))  extra = Math.floor(punctPauseMs * 0.55) + rand(0, 120);
+      if (ch === "\n")         extra = Math.floor(punctPauseMs * 0.6) + rand(0, 120);
+
+      await sleep(baseStep + rand(0, 22) + extra);
+    }
   }
 
   function normalize(s){
@@ -236,62 +269,118 @@
       .replace(/[^a-z0-9]+/g," ").trim();
   }
 
+  // version simple: renvoie directement l'item QA (ou null)
   function bestMatch(q){
     const u=normalize(q);
     let best=null,score=0;
     for(const it of (window.QA_BASE||[])){
-      const all=[it.q,...(it.aliases||[])];
+      const all=[it.q,...(it.aliases||[])].filter(Boolean);
       for(const c of all){
         const cn=normalize(c);
-        const s=cn===u?1:(u.includes(cn)||cn.includes(u)?0.85:0);
+        const s = (cn===u) ? 1 : ((u.includes(cn)||cn.includes(u)) ? 0.85 : 0);
         if(s>score){score=s;best=it;}
       }
     }
     return score>=0.78?best:null;
   }
 
-function handleMessage(msg){
-  const thinkingEl = addThinking();          // on affiche "…" tout de suite
-  const delay = randDelay();                // latence variable par message
+  function buildQaSnippet(questionRaw){
+    const q = (questionRaw || "").trim();
+    const now = new Date().toISOString();
+    return JSON.stringify({
+      q,
+      aliases: [],
+      a: "TODO: réponse canonique (voix de Néa).",
+      tags: [],
+      updatedAt: now
+    }, null, 2);
+  }
 
-  setTimeout(() => {
-    // on enlève la ligne "…"
-    if (thinkingEl && thinkingEl.parentNode) thinkingEl.parentNode.removeChild(thinkingEl);
+  function showAdmin(snippet){
+    adminOut.value = snippet || "";
+    adminBox.style.display = "block";
+    adminOut.scrollTop = 0;
+  }
+  function hideAdmin(){
+    adminBox.style.display = "none";
+    adminOut.value = "";
+  }
 
-    // puis on répond
+  // ---------------- Behavior (latence + typewriter)
+  let isTyping = false;
+
+  function focusChat(){
+    try{ hidden.focus(); } catch {}
+  }
+  document.addEventListener("click", ()=>focusChat());
+  window.addEventListener("load", ()=>setTimeout(focusChat, 120));
+
+  hidden.addEventListener("input", ()=>typed.textContent=hidden.value);
+
+  async function handleMessage(msg){
+    // Empêche les réponses qui se chevauchent si l’utilisateur spam Enter
+    if (isTyping) return;
+    isTyping = true;
+
+    // affiche "…" tout de suite
+    const thinkingEl = addThinkingLine();
+
+    // IMPORTANT: on garde TON délai actuel exactement (RESP_DELAY_MS)
+    await sleep(RESP_DELAY_MS);
+
+    // on remplace "…" par la réponse tapée
     const hit = bestMatch(msg);
 
-    if (hit.item && hit.score >= THRESHOLD){
-      const answer = (hit.item.a || "").trim() || "…";
-      addLine("néa ▮", answer);
+    if (hit){
+      const answer = (hit.a || "").trim() || "…";
+      await typeIntoLine(thinkingEl, "néa ▮", answer);
+      isTyping = false;
       return;
     }
 
-    addLine("néa ▮", "Je ne sais pas.");
-    addLine("néa ▮", "Échap. Crée la fiche. Et je saurai la prochaine fois.");
+    // pas trouvé: on tape les messages fallback (dans 2 lignes séparées)
+    // on réutilise la ligne "…" pour la première phrase
+    await typeIntoLine(thinkingEl, "néa ▮", "Je ne sais pas.");
+
+    const l2 = addLine("néa ▮", ""); // ligne vide, puis frappe dedans
+    await typeIntoLine(l2, "néa ▮", "Échap. Crée la fiche. Et je saurai la prochaine fois.");
+
     adminOut.value = buildQaSnippet(msg);
-  }, delay);
-}
+    isTyping = false;
+  }
 
-
-  document.addEventListener("click",()=>hidden.focus());
-  hidden.addEventListener("input",()=>typed.textContent=hidden.value);
-
-  hidden.addEventListener("keydown",e=>{
+  hidden.addEventListener("keydown", e=>{
     if(e.key==="Enter"){
       e.preventDefault();
       const msg=hidden.value.trim();
-      if(!msg)return;
-      addLine("lecteur ▮",msg);
-      hidden.value="";typed.textContent="";
+      if(!msg) return;
+
+      addLine("lecteur ▮", msg);
+      hidden.value=""; typed.textContent="";
+
       handleMessage(msg);
     }
+
     if(e.key==="Escape"){
-      adminBox.style.display=adminBox.style.display==="block"?"none":"block";
+      e.preventDefault();
+      if (adminBox.style.display === "block") hideAdmin();
+      else showAdmin(adminOut.value || buildQaSnippet(""));
     }
   });
+
+  copyBtn.addEventListener("click", async () => {
+    try{
+      await navigator.clipboard.writeText(adminOut.value || "");
+      addLine("néa ▮", "Copié.");
+    } catch {
+      addLine("néa ▮", "Impossible de copier automatiquement. Sélectionne puis copie manuellement.");
+    }
+  });
+
+  closeAdminBtn.addEventListener("click", () => hideAdmin());
 
   addLine("néa ▮","Pose ta question.");
 </script>
 </body>
 </html>
+``
