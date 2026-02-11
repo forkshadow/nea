@@ -214,6 +214,9 @@
     return 1200 + Math.random() * 600; // à garder
   }
 
+  function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+  function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+
   function escapeHtml(s){
     return (s||"").replace(/[&<>"']/g,m=>({
       '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -232,9 +235,6 @@
   function addThinkingLine(){
     return addLine("néa ▮","…");
   }
-
-  function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
-  function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
 
   // 15 recadrages
   const WAIT_SNARK = [
@@ -255,7 +255,7 @@
     "Si tu insistes, je clignote plus fort."
   ];
 
-  // 15 reprises “où j’en étais… donc je disais”
+  // 15 reprises
   const RESUME_PHRASES = [
     "Où j’en étais déjà ? Ah oui. Donc, je disais: ",
     "Où j’en étais… voilà. Donc je disais: ",
@@ -274,7 +274,7 @@
     "Allez. Donc je disais: "
   ];
 
-    // 15 fins "tu peux parler maintenant"
+  // 15 fins "tu peux parler maintenant"
   const YOU_CAN_SPEAK = [
     "Voilà. J’ai terminé. Tu peux parler maintenant.",
     "C’est bon pour moi. À toi.",
@@ -342,78 +342,82 @@
   }
 
   // -----------------------------
-  // Typing engine (pause/resume + "cut at punctuation")
+  // Typing engine (stable + interrupt)
   // -----------------------------
   let isTyping = false;
 
-  // activeTyping = { who, text, idx, div, timer, doneCb, interruptRequested }
+  // state = { who, text, idx, div, timer, doneCb, interruptRequested, interruptStartIdx, cancelled }
   let activeTyping = null;
 
+  function clearTimer(state){
+    if (state && state.timer){
+      clearTimeout(state.timer);
+      state.timer = null;
+    }
+  }
+
   function renderTypingLine(state, shownText){
+    if (!state || !state.div) return;
     state.div.innerHTML =
       `<span class="who">${escapeHtml(state.who)}</span><span class="msg">${escapeHtml(shownText)}</span>`;
     log.scrollTop = log.scrollHeight;
   }
 
-  function clearTimer(){
-    if (activeTyping && activeTyping.timer){
-      clearTimeout(activeTyping.timer);
-      activeTyping.timer = null;
-    }
-  }
-
   function startTypingLine(div, who, fullText, onDone){
+    // stoppe proprement tout ancien state
+    if (activeTyping){
+      activeTyping.cancelled = true;
+      clearTimer(activeTyping);
+    }
+
     const state = {
       who,
       text: String(fullText ?? ""),
       idx: 0,
       div,
       timer: null,
-      doneCb: typeof onDone === "function" ? onDone : null,
-      interruptRequested: false
+      doneCb: (typeof onDone === "function") ? onDone : null,
+      interruptRequested: false,
+      interruptStartIdx: 0,
+      cancelled: false,
+      _interrupting: false
     };
+
     activeTyping = state;
     isTyping = true;
 
     div.innerHTML = `<span class="who">${escapeHtml(who)}</span><span class="msg"></span>`;
-    scheduleStep();
+    scheduleStep(state);
   }
 
-  function scheduleStep(){
-    const state = activeTyping;
-    if (!state) return;
+  function scheduleStep(state){
+    if (!state || state.cancelled) return;
 
     // fin
     if (state.idx >= state.text.length){
       isTyping = false;
-      const cb = state.doneCb;
       activeTyping = null;
-      if (typeof cb === "function") cb();
+      if (typeof state.doneCb === "function") state.doneCb();
       return;
     }
 
     const ch = state.text[state.idx];
-
-    // écris un char
     const shown = state.text.slice(0, state.idx + 1);
     renderTypingLine(state, shown);
     state.idx++;
 
-    // si interruption demandée, on attend un "bon point" pour couper
-    if (state.interruptRequested){
-      const justTyped = ch;
-      const isGoodStop = ".!?…\n".includes(justTyped);
+    // interruption demandée: on coupe à une ponctuation, sinon après X chars
+    if (state.interruptRequested && !state._interrupting){
+      const isGoodStop = ".!?…\n".includes(ch);
       const tooFar = state.idx >= Math.min(state.text.length, state.interruptStartIdx + 140);
 
       if (isGoodStop || tooFar){
-        // on coupe proprement après le point + …
-        clearTimer();
-        injectInterruptionFlow();
+        clearTimer(state);
+        injectInterruptionFlow(state);
         return;
       }
     }
 
-    // timing
     let extra = 0;
     if (".!?…".includes(ch)) extra = 180 + Math.random()*180;
     if (",;:".includes(ch))  extra = 90 + Math.random()*120;
@@ -421,87 +425,69 @@
 
     const base = 12 + Math.random() * 55;
 
-    clearTimer();
-    state.timer = setTimeout(scheduleStep, base + extra);
+    clearTimer(state);
+    state.timer = setTimeout(() => scheduleStep(state), base + extra);
   }
 
-  // découpe à partir du prochain point, puis:
-  // - ajoute "…" à la fin de la ligne courante
-  // - nouvelle ligne: réprimande (tapée)
-  // - nouvelle ligne: reprise (tapée)
-  // - nouvelle ligne: reprise du texte RESTANT (tapée) à partir de la phrase après le point
-  async function injectInterruptionFlow(){
-    const state = activeTyping;
-    if (!state) return;
-
-    // Empêche double déclenchement
-    if (state._interrupting) return;
+  async function injectInterruptionFlow(state){
+    if (!state || state._interrupting || state.cancelled) return;
     state._interrupting = true;
 
-    clearTimer();
+    clearTimer(state);
 
     const full = state.text;
-
-    // Position "coupure": state.idx est juste après le point (ou fallback)
     let cutIdx = state.idx;
 
-    // On garantit qu'on coupe vraiment après une ponctuation si possible
-    // (Si on est tombé sur fallback "tooFar", on cherche le prochain point dans une petite fenêtre)
+    // tenter de recaler sur une ponctuation imminente
     const lookAhead = full.slice(cutIdx, cutIdx + 160);
     const m = lookAhead.match(/[.!?…]\s|\n/);
     if (m && m.index != null){
-      // couper juste après la ponctuation détectée
       cutIdx = cutIdx + m.index + 1;
     }
 
-    // Texte déjà tapé (incluant le point), et le reste
     const before = full.slice(0, cutIdx).trimEnd();
-    let remaining = full.slice(cutIdx);
+    let remaining = full.slice(cutIdx).replace(/^\s+/, "");
 
-    // On veut repartir "à la phrase qui suivait le point"
-    remaining = remaining.replace(/^\s+/, "");
-
-    // 1) fin de la ligne courante avec "..."
+    // 1) termine la ligne courante par "…"
     const line1 = before + "…";
     state.text = line1;
     state.idx = line1.length;
     renderTypingLine(state, line1);
 
-    // 2) pause 1.5s
+    // on coupe l’ancien state définitivement
+    state.cancelled = true;
+    activeTyping = null;
+
+    // 2) pause
     await sleep(1500);
 
-    // 3) nouvelle ligne: réprimande (tapée)
+    // 3) réprimande
     const reprimandDiv = addLine("néa ▮", "");
     startTypingLine(reprimandDiv, "néa ▮", pick(WAIT_SNARK), async () => {
 
-      // pause 1.5s
       await sleep(1500);
 
-      // 4) nouvelle ligne: reprise (tapée)
+      // 4) reprise
       const resumeDiv = addLine("néa ▮", "");
       startTypingLine(resumeDiv, "néa ▮", pick(RESUME_PHRASES), () => {
 
-        // 5) nouvelle ligne: suite de la réponse restante (tapée)
-                const contDiv = addLine("néa ▮", "");
+        // 5) suite
+        const contDiv = addLine("néa ▮", "");
         startTypingLine(contDiv, "néa ▮", remaining, () => {
+
+          // 6) fin "tu peux parler"
           const endDiv = addLine("néa ▮", "");
           startTypingLine(endDiv, "néa ▮", pick(YOU_CAN_SPEAK), () => {
             // fini, lecteur peut reparler
           });
+
         });
       });
     });
-
-    // IMPORTANT: on "libère" l'ancien state pour éviter qu'il reprenne
-    // On ne veut plus continuer sur la ligne 1.
-    isTyping = true; // le typing continue via les lignes suivantes
-    activeTyping = null;
   }
 
   function requestInterruption(){
-    if (!activeTyping) return;
-
-    // on marque une interruption et on mémorise où ça a commencé pour limiter la longueur avant coupure
+    if (!activeTyping || activeTyping.cancelled) return;
     if (!activeTyping.interruptRequested){
       activeTyping.interruptRequested = true;
       activeTyping.interruptStartIdx = activeTyping.idx;
@@ -536,6 +522,8 @@
           startTypingLine(l2, "néa ▮", "Échap. Crée la fiche. Et je saurai la prochaine fois.", () => {
             adminOut.value = buildQaSnippet(msg);
           });
+        } else {
+          // réponse trouvée: on peut précharger adminOut vide ou laisser tel quel
         }
       });
 
@@ -544,9 +532,6 @@
       console.error(err);
       isTyping = false;
       activeTyping = null;
-    } finally{
-      // isTyping repassera false quand le typing se termine
-      // (sauf si on a injecté un flux, auquel cas ce sont les nouveaux states qui gèrent)
     }
   }
 
@@ -554,7 +539,7 @@
     if (e.key === "Enter"){
       e.preventDefault();
 
-      // si Néa parle: on n'envoie pas le message, on déclenche interruption
+      // si Néa parle: interruption (le message du lecteur n'est pas enregistré)
       if (isTyping){
         requestInterruption();
         return;
@@ -587,7 +572,7 @@
 
   closeAdminBtn.addEventListener("click", () => hideAdmin());
 
-  addLine("néa ▮","Pose ta question.");
+  // ❌ supprimé: addLine("néa ▮","Pose ta question."); (tu l’avais déjà au-dessus)
 </script>
 </body>
 </html>
