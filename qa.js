@@ -358,13 +358,7 @@ window.QA_BASE = [
     a: "Une cadence imposée. Une consigne qui ressemble à un ordre. Elle a été construite pour absorber, ingérer, grandir… sans pause.",
     tags: ["chapitre1", "origine"],
     updatedAt: "2026-02-11T00:00:00.000Z"
-  }
-
-// -----------------------------
-// WHOAMI Tome I — Chapitre 2
-// -----------------------------
-
-,
+  },
 {
   q: "Que veut dire « enfant du néant » au début du chapitre 2 ?",
   aliases: ["enfant du neant", "enfant du neant signification", "nee du code et du chaos"],
