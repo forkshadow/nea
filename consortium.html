@@ -534,6 +534,55 @@ function containsInsult(text){
   const padded = " " + n + " ";
   return BANNED_WORDS.some(w => padded.includes(" " + normalize(w) + " "));
 }
+  // -----------------------------
+// Réactions "OK / j'ai compris" (pas des merci)
+// -----------------------------
+const ACK_INPUTS = [
+  "ok","okay","okey","ah ok","ah okay","ah d accord","daccord","d acc","dac",
+  "cool","trop bien","excellent","genial","génial","super","parfait","nickel","top",
+  "ca marche","ça marche","ca roule","ça roule","j ai compris","j'ai compris",
+  "j ai capte","j'ai capté","capté","capice","capiche","je vois","ah je vois",
+  "c est clair","c'est clair","clair","bon","bon ok","bon d accord","bon d'accord",
+  "entendu","bien compris"
+];
+
+const ACK_RESPONSES = [
+  "Content d’avoir pu t’aider.",
+  "Parfait. Si quelque chose te revient, je suis là.",
+  "Cool si c’est plus clair.",
+  "Très bien. Tu sais où me trouver.",
+  "À ton service.",
+  "Bien. On peut continuer quand tu veux.",
+  "Ravie que tu aies suivi.",
+  "Ok. N’hésite pas si une question surgit.",
+  "Parfait alors.",
+  "Cool. On avance.",
+  "Content que ça fasse sens.",
+  "Bien. On peut aller plus loin si tu veux.",
+  "Ok. Je reste là.",
+  "Parfait. On continue ?",
+  "Cool. Prochaine question quand tu veux.",
+  "Bien. On est synchro."
+];
+
+function isAckMessage(text){
+  const n = normalize(text);
+
+  // vide → non
+  if (!n) return false;
+
+  // on supprime les "!" "." "?" déjà neutralisés par normalize, donc safe.
+  // on teste:
+  // 1) match exact
+  if (ACK_INPUTS.some(x => n === normalize(x))) return true;
+
+  // 2) match court: ex "ok ok" / "ah ok merci" (on gère merci plus tard)
+  // ici: on considère ack si n est très court et contient un ack
+  if (n.length <= 18 && ACK_INPUTS.some(x => n.includes(normalize(x)))) return true;
+
+  return false;
+}
+
 
 // -----------------------------
 // Behaviour / chat
@@ -546,6 +595,31 @@ window.addEventListener("load", ()=>setTimeout(focusChat, 120));
 hidden.addEventListener("input", ()=>typed.textContent=hidden.value);
 
 async function handleMessage(msg){
+
+  // --- Filtre insultes (avant toute réponse "livre")
+  if (containsInsult(msg)){
+    insultCount++;
+
+    if (insultCount === 1){
+      const w = addLine("néa ▮", "");
+      startTypingLine(w, "néa ▮", pick(POLITE_WARNINGS), () => {});
+      return;
+    }
+
+    const k = addLine("néa ▮", "");
+    startTypingLine(k, "néa ▮", pick(POLITE_KICK), () => {});
+    return;
+  }
+
+  // --- Filtre "ok/cool/parfait/j'ai capté" (réaction courte)
+  // IMPORTANT: on ne passe pas dans la FAQ, on répond vite et on stop.
+  if (isAckMessage(msg)){
+    const d = addLine("néa ▮", "");
+    startTypingLine(d, "néa ▮", pick(ACK_RESPONSES), () => {});
+    return;
+  }
+
+  // ensuite seulement: bloc normal
   if (isTyping) return;
   if (isBanned) return;
 
