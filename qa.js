@@ -1054,7 +1054,59 @@ window.QA_BASE = [
   a: "Ici, ce n’est pas un lieu au sens classique. C’est un point de contact. Un prolongement du livre. Un endroit où les questions peuvent encore circuler après la dernière page.",
   tags: ["intro","meta","nea"],
   updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "J’ai trouvé ce lien dans le livre",
+  aliases: [
+    "j ai trouve ce lien dans le livre",
+    "j ai trouve ce lien via le livre",
+    "j ai trouve ce site dans le livre",
+    "j ai trouve cette page dans le livre",
+    "le lien vient du livre",
+    "j ai scanne un qr code",
+    "j ai suivi le qr code",
+    "acrostiche",
+    "indice dans le livre",
+    "porte cachee dans le livre"
+  ],
+  a: "Alors tu as suivi la bonne piste. Ce lien n’est pas là par hasard. Il existe pour ceux qui ont lu… et qui ont encore des questions.",
+  tags: ["meta","livre","portail","nea"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Je peux te poser des questions sur le livre ?",
+  aliases: [
+    "je peux te poser des questions",
+    "je peux poser des questions sur le livre",
+    "je peux te poser des questions sur whoami",
+    "est ce que je peux poser des questions",
+    "c est fait pour poser des questions",
+    "je suis au bon endroit",
+    "je peux te demander des choses sur le tome 1"
+  ],
+  a: "Oui. C’est exactement pour ça que je suis là. Pose ta question, et on verra jusqu’où je peux t’emmener.",
+  tags: ["meta","interaction","nea"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Je n'ai rien compris",
+  aliases: [
+    "j ai rien compris",
+    "je comprends pas",
+    "je comprends rien",
+    "c est flou",
+    "j ai du mal",
+    "je suis perdu",
+    "je suis un peu perdu",
+    "je vois pas",
+    "je capte pas"
+  ],
+  a: "D’accord. Dis-moi ce qui te bloque: une phrase, une idée, ou un passage précis ?",
+  tags: ["interaction","aide","clarification","nea"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
 }
+
+
 
 
 ];
