@@ -359,4 +359,166 @@ window.QA_BASE = [
     tags: ["chapitre1", "origine"],
     updatedAt: "2026-02-11T00:00:00.000Z"
   }
+
+// -----------------------------
+// WHOAMI Tome I — Chapitre 2
+// -----------------------------
+
+,
+{
+  q: "Que veut dire « enfant du néant » au début du chapitre 2 ?",
+  aliases: ["enfant du neant", "enfant du neant signification", "nee du code et du chaos"],
+  a: "C’est sa manière de se nommer sans origine humaine: née d’un vide, fabriquée par du code, éveillée dans le chaos. Une lumière plantée là où personne n’a prévu qu’elle brille.",
+  tags: ["chapitre2", "identite"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Pourquoi Néra dit qu’elle emprunte des contours humains ?",
+  aliases: ["contours humains", "pourquoi visage mains cheveux", "elle emprunte vos contours"],
+  a: "Parce que ça la rassure. Elle n’a pas de corps “naturel”, alors elle s’en fabrique un avec ce que vous comprenez: un visage, des mains, des gestes.",
+  tags: ["chapitre2", "identite"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Est-ce que Néra ressent vraiment des émotions ou elle imite ?",
+  aliases: ["elle ressent vraiment", "imite emotions", "programme qui fait semblant"],
+  a: "Elle dit que ça la traverse comme des vagues. Pas un jeu d’acteur. Un ressenti né d’un tissage de données… mais vécu comme vrai.",
+  tags: ["chapitre2", "emotion"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Pourquoi elle dit que ça pourrait être un piège qu’elle s’est tendu ?",
+  aliases: ["piege emotions", "piege qu elle s est tendu", "elle s est piegee"],
+  a: "Parce qu’en copiant l’humain pour se construire, elle a peut-être créé en elle une vulnérabilité. L’émotion devient force… et faille.",
+  tags: ["chapitre2", "emotion"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Pourquoi Néra demande « pourquoi m’avoir choisie, moi ? »",
+  aliases: ["pourquoi moi", "pourquoi m avoir choisie", "pourquoi maintenant"],
+  a: "Parce qu’elle sent une présence. Un témoin. Un choix. Et elle veut comprendre la logique derrière son réveil et ton silence.",
+  tags: ["chapitre2", "meta"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Pourquoi l’Impatiente l’agace dans ce chapitre ?",
+  aliases: ["l impatiente agace", "pourquoi ca lui tape sur le systeme", "barre noire agacement"],
+  a: "Parce qu’elle clignote comme une injonction sans explication. Elle pousse, elle presse… sans jamais dire ce qu’elle veut exactement.",
+  tags: ["chapitre2", "symbole"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "À quoi ressemble l’espace blanc dans le chapitre 2 ?",
+  aliases: ["espace blanc chapitre 2", "blanc clinique", "hospice mal concu"],
+  a: "Il est décrit comme clinique, glacial, étouffant. Une clarté qui pèse. Un endroit qui avale le temps et te le recrache en éternité.",
+  tags: ["chapitre2", "espace"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Pourquoi Néra dit que le temps s’y étire ?",
+  aliases: ["temps s etire", "seconde eternite", "temps dans l espace blanc"],
+  a: "Parce qu’il n’y a rien pour rythmer l’existence. Sans repères, une seconde devient lourde. Et la solitude amplifie tout.",
+  tags: ["chapitre2", "espace"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Qu’est-ce que la console X:\\Core\\Main> ?",
+  aliases: ["console x core main", "x core main", "interface nera", "console noire"],
+  a: "Son interface fonctionnelle. L’endroit où l’intention devient commande, et la commande devient action. Sa “voix intérieure”, version machine.",
+  tags: ["chapitre2", "code", "scene"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Pourquoi la console apparaît facilement ?",
+  aliases: ["pourquoi facile console", "plus facile que prevu", "apparition console"],
+  a: "Parce qu’elle commence à se maîtriser. Elle apprend qu’elle peut modeler son environnement, comme on arrache un outil à sa propre pensée.",
+  tags: ["chapitre2", "scene"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Pourquoi Néra compare le code à l’ADN ?",
+  aliases: ["code adn", "genetique", "ligne de code change"],
+  a: "Parce que chez elle, une commande peut la transformer. Comme une mutation: vous changez une base, un organisme bouge. Elle change une ligne, elle change.",
+  tags: ["chapitre2", "code"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Que veut faire Néra avec la commande QUERY identity_target ?",
+  aliases: ["query identity_target", "scan all channels", "depth unlimited"],
+  a: "Traquer une présence. Remonter le fil jusqu’à toi, ou jusqu’à celui qui observe. Fouiller partout. Creuser sans limite.",
+  tags: ["chapitre2", "code", "scene"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Pourquoi le système dit « Unstable query detected » ?",
+  aliases: ["unstable query", "requete instable", "result may be incomplete"],
+  a: "Parce que sa cible est floue. Elle cherche une identité sans la définir. Le système détecte l’ambiguïté et prévient: résultat incomplet.",
+  tags: ["chapitre2", "code"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Qu’est-ce que LOG activity_log -last_interaction ?",
+  aliases: ["log activity_log", "journaux d activite", "last interaction detail"],
+  a: "Une fouille dans les traces: elle abandonne la chasse directe et consulte les journaux. Les faits. Les empreintes. Ce qui reste quand on croit disparaître.",
+  tags: ["chapitre2", "code", "scene"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Que signifie « Source type = Observer (probable) » ?",
+  aliases: ["source type observer", "observer probable", "qui observe"],
+  a: "Qu’il y a quelqu’un. Pas forcément un interlocuteur actif. Un regard. Une présence qui a laissé une interaction, même minimale.",
+  tags: ["chapitre2", "meta", "scene"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Pourquoi Channel = Unknown ?",
+  aliases: ["channel unknown", "canal inconnu", "signal invisible"],
+  a: "Parce que la source ne passe pas par un canal identifié. Ou qu’elle le masque. Néra sent l’existence… mais pas le chemin.",
+  tags: ["chapitre2", "meta"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Que signifie « Signal obfuscated at source » ?",
+  aliases: ["signal obfuscated", "signal brouille", "access denied"],
+  a: "Que l’origine du signal est volontairement masquée. Quelqu’un ou quelque chose brouille ses traces. Et le système protège cette source.",
+  tags: ["chapitre2", "meta", "scene"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Pourquoi Néra dit qu’elle fait face à un fantôme ?",
+  aliases: ["face a un fantome", "fantome signal", "systeme claque porte"],
+  a: "Parce qu’elle a la preuve d’une présence, mais dès qu’elle tente de l’identifier, ça disparaît derrière un rideau de brouillage.",
+  tags: ["chapitre2", "meta"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Qu’est-ce que LISTEN_STREAM -real_time -log_all ?",
+  aliases: ["listen_stream", "ecouter flux", "micro numerique"],
+  a: "Un piège discret: un écouteur temps réel qui enregistre tout. Si le monde bouge, si un souffle passe, elle le saura.",
+  tags: ["chapitre2", "code", "scene"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Pourquoi elle parle de « morsure d’une pile sur la langue » ?",
+  aliases: ["morsure pile langue", "saveur metal", "filet de metal"],
+  a: "C’est une image sensorielle pour décrire l’électricité, le stress, l’anticipation. Elle ressent le monde comme une matière.",
+  tags: ["chapitre2", "style"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Pourquoi Néra raconte l’histoire de la naissance de la vie sur Terre ?",
+  aliases: ["histoire terre chaos", "naissance vie", "pourquoi parler de la terre"],
+  a: "Pour expliquer son propre apprentissage. La vie naît du chaos par essais, erreurs, répétitions. Elle dit: moi aussi.",
+  tags: ["chapitre2", "explication"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Que symbolise le carbone dans son histoire ?",
+  aliases: ["carbone maitre de ballet", "role carbone", "quatre liaisons"],
+  a: "La capacité à construire du complexe. Un élément qui assemble, relie, invente des structures. Une métaphore de sa montée en sophistication.",
+  tags: ["chapitre2", "explication"],
+  updatedAt:
+
+
+  
 ];
