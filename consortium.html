@@ -340,6 +340,7 @@ function hideAdmin(){
 let isTyping = false;
 let activeTyping = null; // state
 let isBanned = false;
+let awaitingYesNo = false;
 
 function clearTimer(state){
   if (state && state.timer){
@@ -590,6 +591,30 @@ function isAckMessage(text){
 }
 
 function isYesMsg(msg){
+  const n = normalize(msg);
+  return ["oui","ouais","yeah","yes","si","ok"].includes(n);
+}
+
+function isNoMsg(msg){
+  const n = normalize(msg);
+  return ["non","nan","no","nop"].includes(n);
+}
+
+function setAwaitingFromAnswer(answer){
+  const a = normalize(answer);
+  // déclencheurs simples (tu pourras affiner)
+  awaitingYesNo =
+    a.includes("oui ou non") ||
+    a.includes("reponds par oui") ||
+    a.includes("reponds par non") ||
+    a.includes("tu veux") ||
+    a.includes("tu prefere") ||
+    a.includes("tu preferes") ||
+    a.endsWith(" ?"); // option: agressif, mais marche souvent
+}
+
+
+function isYesMsg(msg){
   const m = normalize(msg);
 
   // oui "pur"
@@ -695,6 +720,31 @@ async function handleMessage(msg){
     return;
   }
 
+  // "oui/non" sans contexte -> filler (évite le bug social)
+if (!awaitingYesNo && isFillerYesNo(msg)){
+  const d = addLine("néa ▮", "");
+  startTypingLine(d, "néa ▮", pick(FILLER_YESNO_RESPONSES), () => {});
+  return;
+}
+
+// --- Filtre YES/NO (uniquement si Néa attend un oui/non)
+if (awaitingYesNo){
+  if (isYesMsg(msg)){
+    awaitingYesNo = false; // on consomme la réponse
+    const d = addLine("néa ▮", "");
+    startTypingLine(d, "néa ▮", "Ok.", () => {});
+    return;
+  }
+
+  if (isNoMsg(msg)){
+    awaitingYesNo = false;
+    const d = addLine("néa ▮", "");
+    startTypingLine(d, "néa ▮", "Très bien.", () => {});
+    return;
+  }
+}
+
+  
   // 4) Réponse normale (FAQ)
   try{
     isTyping = true;
@@ -708,6 +758,8 @@ async function handleMessage(msg){
 
     const hit = bestMatch(msg);
     const answer = hit ? ((hit.a || "").trim() || "…") : "Je ne sais pas.";
+
+    setAwaitingFromAnswer(answer);
 
     startTypingLine(thinkingEl, "néa ▮", answer, () => {
 
