@@ -535,6 +535,21 @@ function containsInsult(text){
   return BANNED_WORDS.some(w => padded.includes(" " + normalize(w) + " "));
 }
 
+const FILLER_YESNO_INPUTS = ["oui","ouais","yes","si","non","nan","no","nop"];
+
+const FILLER_YESNO_RESPONSES = [
+  "Ok. Mais dis-moi plutôt ce que tu veux savoir.",
+  "D’accord. Pose ta question clairement.",
+  "Très bien. Tu veux parler du chapitre 1, ou d’autre chose ?",
+  "Je t’écoute. Une vraie question, maintenant.",
+  "On va éviter les réponses fantômes. Qu’est-ce que tu cherches ?"
+];
+
+function isFillerYesNo(msg){
+  const m = normalize(msg);
+  return FILLER_YESNO_INPUTS.includes(m);
+}
+
 // -----------------------------
 // Réactions ACK (ok/cool...) + Oui/Non
 // -----------------------------
