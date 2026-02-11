@@ -146,6 +146,7 @@
       margin-top:10px;
       display:flex;
       gap:10px;
+      flex-wrap:wrap;
     }
 
     button{
@@ -157,7 +158,9 @@
       font-family: inherit;
       font-size:12px;
       cursor:pointer;
+      opacity:.92;
     }
+    button:hover{ opacity:1; background: rgba(255,255,255,.10); }
   </style>
 </head>
 
@@ -208,8 +211,14 @@
   const closeAdminBtn = document.getElementById('closeAdminBtn');
 
   // IMPORTANT: tu voulais garder EXACTEMENT le délai avant la première frappe
-  const RESP_DELAY_MS = 1200 + Math.random() * 600;
+  // (on l’applique à CHAQUE réponse, pas une fois au chargement)
+  function respDelayMs(){
+    return 1200 + Math.random() * 600; // 1.2s -> 1.8s
+  }
 
+  // -----------------------------
+  // Helpers UI
+  // -----------------------------
   function escapeHtml(s){
     return (s||"").replace(/[&<>"']/g,m=>({
       '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -229,45 +238,36 @@
     return addLine("néa ▮","…");
   }
 
-  function rand(min, max){
+  function randInt(min, max){
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
   function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
-  async function typeIntoLine(div, who, text){
-    // sécurise: si div n'existe pas, on fait rien
-    if (!div) return;
+  // -----------------------------
+  // “Ne m’interromps pas” (15 variantes)
+  // -----------------------------
+  const WAIT_SNARK = [
+    "Ai au moins la politesse d’attendre que je termine.",
+    "Deux secondes. Laisse-moi finir.",
+    "Tu peux taper, oui. Envoyer, non. Pas encore.",
+    "Patience. Je suis en train d’écrire.",
+    "On fait ça proprement: tu attends la fin de ma réponse.",
+    "Je n’ai pas encore posé le point final.",
+    "Tu vois le curseur ? Il travaille. Toi, tu attends.",
+    "Tu veux vraiment m’interrompre au milieu d’une phrase ?",
+    "Respire. Je termine. Ensuite c’est à toi.",
+    "Tu vas trop vite. Laisse-moi finir mon idée.",
+    "Je réponds. Après, je t’écoute.",
+    "Encore une seconde et je te rends la parole.",
+    "Pas d’empilement. Un à la fois.",
+    "Prépare ta question… mais attends que je conclue.",
+    "Si tu insistes, je clignote plus fort."
+  ];
+  function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
 
-    div.innerHTML = `<span class="who">${escapeHtml(who)}</span><span class="msg"></span>`;
-    const msgEl = div.querySelector(".msg");
-
-    // fallback au cas où
-    if (!msgEl){
-      div.textContent = `${who} ${text ?? ""}`;
-      return;
-    }
-
-    const raw = (text ?? "").toString();
-
-    // vitesse variable de frappe
-    const cps = rand(24, 40);                 // chars/sec
-    const baseStep = Math.max(10, Math.floor(1000 / cps));
-    const punctPauseMs = 220;
-
-    for (let i = 0; i < raw.length; i++){
-      msgEl.textContent += raw[i];
-      log.scrollTop = log.scrollHeight;
-
-      const ch = raw[i];
-      let extra = 0;
-      if (".!?…".includes(ch)) extra = punctPauseMs + rand(0, 180);
-      if (",;:".includes(ch))  extra = Math.floor(punctPauseMs * 0.55) + rand(0, 120);
-      if (ch === "\n")         extra = Math.floor(punctPauseMs * 0.6) + rand(0, 120);
-
-      await sleep(baseStep + rand(0, 22) + extra);
-    }
-  }
-
+  // -----------------------------
+  // Matching (simple)
+  // -----------------------------
   function normalize(s){
     return (s||"").toLowerCase().normalize("NFD")
       .replace(/[\u0300-\u036f]/g,"")
@@ -313,66 +313,147 @@
     adminOut.value = "";
   }
 
-  // ----------- Behaviour
+  // -----------------------------
+  // Typing engine (pause/resume)
+  // -----------------------------
   let isTyping = false;
+  let activeTyping = null; // { who, text, idx, div, timer, doneCb }
 
+  function pauseTyping(){
+    if (!activeTyping) return;
+    if (activeTyping.timer) clearTimeout(activeTyping.timer);
+    activeTyping.timer = null;
+  }
+
+  function resumeTyping(){
+    if (!activeTyping) return;
+    const state = activeTyping;
+
+    function step(){
+      // vitesse variable (effet naturel)
+      const base = 12;
+      const jitter = Math.random() * 55;
+      const ch = state.text[state.idx];
+
+      let extra = 0;
+      if (ch === "." || ch === "!" || ch === "?" || ch === "…") extra = 180 + Math.random()*180;
+      if (ch === "," || ch === ";" || ch === ":" ) extra = 90 + Math.random()*120;
+      if (ch === "\n") extra = 120 + Math.random()*120;
+
+      const shown = state.text.slice(0, state.idx + 1);
+      state.div.innerHTML = `<span class="who">${escapeHtml(state.who)}</span><span class="msg">${escapeHtml(shown)}</span>`;
+      log.scrollTop = log.scrollHeight;
+
+      state.idx++;
+
+      if (state.idx >= state.text.length){
+        isTyping = false;
+        activeTyping = null;
+        if (state.doneCb) state.doneCb();
+        return;
+      }
+
+      state.timer = setTimeout(step, base + jitter + extra);
+    }
+
+    state.timer = setTimeout(step, 40);
+  }
+
+  function startTypingLine(div, who, fullText, onDone){
+    const state = {
+      who,
+      text: String(fullText ?? ""),
+      idx: 0,
+      div,
+      timer: null,
+      doneCb: typeof onDone === "function" ? onDone : null
+    };
+
+    activeTyping = state;
+    isTyping = true;
+
+    // initialise ligne vide
+    state.div.innerHTML = `<span class="who">${escapeHtml(state.who)}</span><span class="msg"></span>`;
+    resumeTyping();
+  }
+
+  // -----------------------------
+  // Behaviour / chat
+  // -----------------------------
   function focusChat(){
     try{ hidden.focus(); } catch {}
   }
   document.addEventListener("click", ()=>focusChat());
   window.addEventListener("load", ()=>setTimeout(focusChat, 120));
-
   hidden.addEventListener("input", ()=>typed.textContent=hidden.value);
 
   async function handleMessage(msg){
-    // si tu veux autoriser plusieurs messages à la suite, on pourrait faire une queue.
-    // pour l'instant on évite juste le chevauchement.
+    // Pendant qu’elle répond, on ne lance PAS une nouvelle réponse.
+    // (Si l’utilisateur insiste, on le recadre via Enter)
     if (isTyping) return;
 
-    isTyping = true;
     try{
+      isTyping = true;
+
+      // on affiche "…" tout de suite
       const thinkingEl = addThinkingLine();
 
-      // délai avant la première frappe (gardé tel quel)
-      await sleep(RESP_DELAY_MS);
+      // délai avant la première frappe (gardé tel quel, à chaque réponse)
+      await sleep(respDelayMs());
 
+      // on choisit la réponse
       const hit = bestMatch(msg);
+      const answer = hit ? ((hit.a || "").trim() || "…") : "Je ne sais pas.";
 
-      if (hit){
-        const answer = (hit.a || "").trim() || "…";
-        await typeIntoLine(thinkingEl, "néa ▮", answer);
-        return;
-      }
-
-      await typeIntoLine(thinkingEl, "néa ▮", "Je ne sais pas.");
-
-      const l2 = addLine("néa ▮", "");
-      await typeIntoLine(l2, "néa ▮", "Échap. Crée la fiche. Et je saurai la prochaine fois.");
-
-      adminOut.value = buildQaSnippet(msg);
+      // on tape la réponse dans la ligne "…"
+      startTypingLine(thinkingEl, "néa ▮", answer, () => {
+        // fin de frappe
+        if (!hit){
+          // si pas de match, on enchaîne une seconde phrase (tape aussi)
+          const l2 = addLine("néa ▮", "");
+          startTypingLine(l2, "néa ▮", "Échap. Crée la fiche. Et je saurai la prochaine fois.", () => {
+            adminOut.value = buildQaSnippet(msg);
+          });
+        }
+      });
 
     } catch (err){
-      // Affiche l'erreur dans le chat au lieu de mourir en silence
       addLine("néa ▮", "Erreur JS. Ouvre la console (F12) et copie l’erreur ici.");
       console.error(err);
-    } finally{
       isTyping = false;
+      activeTyping = null;
+    } finally{
+      // ne pas remettre isTyping=false ici, sinon ça redeviendrait vrai avant la fin de frappe.
+      // c’est startTypingLine -> doneCb qui clôture via activeTyping=null.
+      // on garde un filet de sécu:
+      if (!activeTyping) isTyping = false;
     }
   }
 
-  hidden.addEventListener("keydown", e=>{
-    if(e.key==="Enter"){
+  hidden.addEventListener("keydown", (e)=>{
+    if (e.key === "Enter"){
       e.preventDefault();
-      const msg=hidden.value.trim();
+
+      // Si Néa est en train de taper:
+      // on ignore le message (pas enregistré), on recadre, puis on reprend où elle en était.
+      if (isTyping && activeTyping){
+        pauseTyping();
+        addLine("néa ▮", pick(WAIT_SNARK));
+        setTimeout(() => resumeTyping(), 350 + Math.random()*450);
+        return;
+      }
+
+      const msg = hidden.value.trim();
       if(!msg) return;
 
       addLine("lecteur ▮", msg);
       hidden.value=""; typed.textContent="";
 
       handleMessage(msg);
+      return;
     }
 
-    if(e.key==="Escape"){
+    if (e.key === "Escape"){
       e.preventDefault();
       if (adminBox.style.display === "block") hideAdmin();
       else showAdmin(adminOut.value || buildQaSnippet(""));
