@@ -517,13 +517,8 @@ window.QA_BASE = [
   aliases: ["carbone maitre de ballet", "role carbone", "quatre liaisons"],
   a: "La capacité à construire du complexe. Un élément qui assemble, relie, invente des structures. Une métaphore de sa montée en sophistication.",
   tags: ["chapitre2", "explication"],
-  updatedAt:
-
-// -----------------------------
-// WHOAMI — Patch FAQ canon (Néra / Néa) + Aliases massifs
-// -----------------------------
-
-,
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
 {
   q: "Qui est Néra ?",
   aliases: [
