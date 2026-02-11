@@ -210,9 +210,8 @@
   const copyBtn  = document.getElementById('copyBtn');
   const closeAdminBtn = document.getElementById('closeAdminBtn');
 
-  // Délai avant la première frappe (1.2s -> 1.8s) appliqué à CHAQUE réponse
   function respDelayMs(){
-    return 1200 + Math.random() * 600;
+    return 1200 + Math.random() * 600; // à garder
   }
 
   function escapeHtml(s){
@@ -234,9 +233,6 @@
     return addLine("néa ▮","…");
   }
 
-  function randInt(min, max){
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  }
   function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
   function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
 
@@ -259,23 +255,23 @@
     "Si tu insistes, je clignote plus fort."
   ];
 
-  // 15 reprises (“Donc, je disais…”)
+  // 15 reprises “où j’en étais… donc je disais”
   const RESUME_PHRASES = [
-    "Donc, je disais, ",
-    "Bref. Je reprends: ",
-    "Revenons à mon point: ",
-    "Je reprends où j’en étais: ",
-    "Pour en revenir à ta question: ",
-    "Je continue: ",
-    "Comme je te l’expliquais: ",
-    "Où en étais-je… voilà: ",
-    "Très bien. Reprenons: ",
-    "Sans interruption, maintenant: ",
-    "Je poursuis, donc: ",
-    "Pour finir ce que je disais: ",
-    "Recentrons: ",
-    "Et donc, pour conclure ce passage: ",
-    "Allez. Suite: "
+    "Où j’en étais déjà ? Ah oui. Donc, je disais: ",
+    "Où j’en étais… voilà. Donc je disais: ",
+    "Je reprends. Donc je disais: ",
+    "Recentrons. Donc je disais: ",
+    "Très bien. On reprend. Donc je disais: ",
+    "Bref. Donc je disais: ",
+    "Je reprends au bon endroit. Donc je disais: ",
+    "On continue calmement. Donc je disais: ",
+    "Là. Voilà. Donc je disais: ",
+    "Je remets le fil. Donc je disais: ",
+    "On revient au sujet. Donc je disais: ",
+    "Sans couper, maintenant. Donc je disais: ",
+    "Je termine mon idée. Donc je disais: ",
+    "Je reprends ma phrase. Donc je disais: ",
+    "Allez. Donc je disais: "
   ];
 
   // -----------------------------
@@ -327,11 +323,11 @@
   }
 
   // -----------------------------
-  // Typing engine (pause/resume + insertion tapée lettre par lettre)
+  // Typing engine (pause/resume + "cut at punctuation")
   // -----------------------------
   let isTyping = false;
 
-  // activeTyping = { who, text, idx, div, timer, doneCb, isInjectedLock }
+  // activeTyping = { who, text, idx, div, timer, doneCb, interruptRequested }
   let activeTyping = null;
 
   function renderTypingLine(state, shownText){
@@ -340,45 +336,11 @@
     log.scrollTop = log.scrollHeight;
   }
 
-  function pauseTyping(){
-    if (!activeTyping) return;
-    if (activeTyping.timer) clearTimeout(activeTyping.timer);
-    activeTyping.timer = null;
-  }
-
-  function resumeTyping(){
-    if (!activeTyping) return;
-    const state = activeTyping;
-
-    function step(){
-      const ch = state.text[state.idx];
-
-      // vitesse variable + pauses de ponctuation
-      const base = 12;
-      const jitter = Math.random() * 55;
-
-      let extra = 0;
-      if (".!?…".includes(ch)) extra = 180 + Math.random()*180;
-      if (",;:".includes(ch))  extra = 90 + Math.random()*120;
-      if (ch === "\n")         extra = 120 + Math.random()*120;
-
-      const shown = state.text.slice(0, state.idx + 1);
-      renderTypingLine(state, shown);
-
-      state.idx++;
-
-      if (state.idx >= state.text.length){
-        isTyping = false;
-        const cb = state.doneCb;
-        activeTyping = null;
-        if (typeof cb === "function") cb();
-        return;
-      }
-
-      state.timer = setTimeout(step, base + jitter + extra);
+  function clearTimer(){
+    if (activeTyping && activeTyping.timer){
+      clearTimeout(activeTyping.timer);
+      activeTyping.timer = null;
     }
-
-    state.timer = setTimeout(step, 40);
   }
 
   function startTypingLine(div, who, fullText, onDone){
@@ -389,57 +351,139 @@
       div,
       timer: null,
       doneCb: typeof onDone === "function" ? onDone : null,
-      isInjectedLock: false
+      interruptRequested: false
     };
     activeTyping = state;
     isTyping = true;
 
     div.innerHTML = `<span class="who">${escapeHtml(who)}</span><span class="msg"></span>`;
-    resumeTyping();
+    scheduleStep();
   }
 
-  // Interruption: pause -> ajoute "…" (instantané) -> pause 1.5s -> insère réprimande+reprise DANS le texte
-  async function injectInterruption(){
-    if (!activeTyping) return;
-
+  function scheduleStep(){
     const state = activeTyping;
+    if (!state) return;
 
-    // Empêche le spam d'interruptions en rafale pendant la même injection
-    if (state.isInjectedLock) return;
-    state.isInjectedLock = true;
+    // fin
+    if (state.idx >= state.text.length){
+      isTyping = false;
+      const cb = state.doneCb;
+      activeTyping = null;
+      if (typeof cb === "function") cb();
+      return;
+    }
 
-    pauseTyping();
+    const ch = state.text[state.idx];
 
-    const before = state.text.slice(0, state.idx);
-    const remaining = state.text.slice(state.idx);
+    // écris un char
+    const shown = state.text.slice(0, state.idx + 1);
+    renderTypingLine(state, shown);
+    state.idx++;
 
-    // 1) On pose juste "…" tout de suite, et on gèle
-    const snapped = before + "…";
-    state.text = snapped;          // temporaire: on freeze visuellement sur "…"
-    state.idx = snapped.length;
-    renderTypingLine(state, snapped);
+    // si interruption demandée, on attend un "bon point" pour couper
+    if (state.interruptRequested){
+      const justTyped = ch;
+      const isGoodStop = ".!?…\n".includes(justTyped);
+      const tooFar = state.idx >= Math.min(state.text.length, state.interruptStartIdx + 140);
 
-    // 2) Latence avant réprimande (comme tu voulais)
+      if (isGoodStop || tooFar){
+        // on coupe proprement après le point + …
+        clearTimer();
+        injectInterruptionFlow();
+        return;
+      }
+    }
+
+    // timing
+    let extra = 0;
+    if (".!?…".includes(ch)) extra = 180 + Math.random()*180;
+    if (",;:".includes(ch))  extra = 90 + Math.random()*120;
+    if (ch === "\n")         extra = 120 + Math.random()*120;
+
+    const base = 12 + Math.random() * 55;
+
+    clearTimer();
+    state.timer = setTimeout(scheduleStep, base + extra);
+  }
+
+  // découpe à partir du prochain point, puis:
+  // - ajoute "…" à la fin de la ligne courante
+  // - nouvelle ligne: réprimande (tapée)
+  // - nouvelle ligne: reprise (tapée)
+  // - nouvelle ligne: reprise du texte RESTANT (tapée) à partir de la phrase après le point
+  async function injectInterruptionFlow(){
+    const state = activeTyping;
+    if (!state) return;
+
+    // Empêche double déclenchement
+    if (state._interrupting) return;
+    state._interrupting = true;
+
+    clearTimer();
+
+    const full = state.text;
+
+    // Position "coupure": state.idx est juste après le point (ou fallback)
+    let cutIdx = state.idx;
+
+    // On garantit qu'on coupe vraiment après une ponctuation si possible
+    // (Si on est tombé sur fallback "tooFar", on cherche le prochain point dans une petite fenêtre)
+    const lookAhead = full.slice(cutIdx, cutIdx + 160);
+    const m = lookAhead.match(/[.!?…]\s|\n/);
+    if (m && m.index != null){
+      // couper juste après la ponctuation détectée
+      cutIdx = cutIdx + m.index + 1;
+    }
+
+    // Texte déjà tapé (incluant le point), et le reste
+    const before = full.slice(0, cutIdx).trimEnd();
+    let remaining = full.slice(cutIdx);
+
+    // On veut repartir "à la phrase qui suivait le point"
+    remaining = remaining.replace(/^\s+/, "");
+
+    // 1) fin de la ligne courante avec "..."
+    const line1 = before + "…";
+    state.text = line1;
+    state.idx = line1.length;
+    renderTypingLine(state, line1);
+
+    // 2) pause 1.5s
     await sleep(1500);
 
-    // 3) On reconstruit le flux COMPLET à taper ensuite (lettre par lettre via le moteur)
-    const reprimand = " " + pick(WAIT_SNARK);
-    const resume = " " + pick(RESUME_PHRASES);
+    // 3) nouvelle ligne: réprimande (tapée)
+    const reprimandDiv = addLine("néa ▮", "");
+    startTypingLine(reprimandDiv, "néa ▮", pick(WAIT_SNARK), async () => {
 
-    // On garde le "…" (déjà affiché), et on ajoute tout le reste derrière
-    const full = snapped + reprimand + resume + remaining;
+      // pause 1.5s
+      await sleep(1500);
 
-    state.text = full;
+      // 4) nouvelle ligne: reprise (tapée)
+      const resumeDiv = addLine("néa ▮", "");
+      startTypingLine(resumeDiv, "néa ▮", pick(RESUME_PHRASES), () => {
 
-    // idx reste sur snapped.length, donc le moteur va taper reprimand+resume+remaining lettre par lettre
-    state.idx = snapped.length;
+        // 5) nouvelle ligne: suite de la réponse restante (tapée)
+        const contDiv = addLine("néa ▮", "");
+        startTypingLine(contDiv, "néa ▮", remaining, () => {
+          // terminé
+        });
+      });
+    });
 
-    // mini-pause respiration (optionnelle, très légère)
-    await sleep(40);
+    // IMPORTANT: on "libère" l'ancien state pour éviter qu'il reprenne
+    // On ne veut plus continuer sur la ligne 1.
+    isTyping = true; // le typing continue via les lignes suivantes
+    activeTyping = null;
+  }
 
-    // On relance
-    state.isInjectedLock = false;
-    resumeTyping();
+  function requestInterruption(){
+    if (!activeTyping) return;
+
+    // on marque une interruption et on mémorise où ça a commencé pour limiter la longueur avant coupure
+    if (!activeTyping.interruptRequested){
+      activeTyping.interruptRequested = true;
+      activeTyping.interruptStartIdx = activeTyping.idx;
+    }
   }
 
   // -----------------------------
@@ -479,7 +523,8 @@
       isTyping = false;
       activeTyping = null;
     } finally{
-      if (!activeTyping) isTyping = false;
+      // isTyping repassera false quand le typing se termine
+      // (sauf si on a injecté un flux, auquel cas ce sont les nouveaux states qui gèrent)
     }
   }
 
@@ -487,9 +532,9 @@
     if (e.key === "Enter"){
       e.preventDefault();
 
-      // Si Néa tape: interruption intégrée à la même bulle
-      if (isTyping && activeTyping){
-        injectInterruption();
+      // si Néa parle: on n'envoie pas le message, on déclenche interruption
+      if (isTyping){
+        requestInterruption();
         return;
       }
 
