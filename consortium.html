@@ -36,9 +36,7 @@
       opacity:.95;
     }
 
-    .nea{
-      opacity:.9;
-    }
+    .nea{ opacity:.9; }
 
     .warning{
       margin-top:28px;
@@ -57,9 +55,7 @@
       transform: translateY(3px);
     }
 
-    @keyframes blink{
-      50%{ opacity:0; }
-    }
+    @keyframes blink{ 50%{ opacity:0; } }
 
     textarea{
       width:100%;
@@ -80,10 +76,131 @@
       font-size:13px;
       opacity:.5;
     }
+
+    /* -----------------------
+       Chat (style Néa)
+    ------------------------*/
+    #chatBox{
+      margin:34px 0 10px 0;
+      padding:18px 14px;
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:10px;
+      background: rgba(255,255,255,.02);
+    }
+
+    #chatTitle{
+      font-size:13px;
+      opacity:.55;
+      margin-bottom:10px;
+      user-select:none;
+    }
+
+    #log{
+      min-height: 160px;
+      max-height: 42vh;
+      overflow:auto;
+      padding: 0 2px 12px 2px;
+      box-sizing:border-box;
+      line-height: 1.35;
+      font-size: 16px;
+      opacity: .92;
+    }
+
+    .chatLine{ margin: 10px 0; white-space: pre-wrap; }
+    .who{ opacity:.60; margin-right:8px; }
+
+    #row{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding-top:6px;
+      border-top:1px solid rgba(255,255,255,.10);
+      margin-top:10px;
+    }
+
+    #hiddenInput{
+      position:absolute;
+      left:-9999px;
+      opacity:0;
+    }
+
+    #typed{
+      font-size: 20px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      min-height: 22px;
+      flex: 1 1 auto;
+    }
+
+    #cursorInput{
+      width: 14px;
+      height: 22px;
+      background:#fff;
+      display:inline-block;
+      opacity:1;
+      transform: translateY(2px);
+      flex: 0 0 auto;
+      animation: blink 1s steps(1) infinite;
+    }
+
+    #hint{
+      margin-top: 10px;
+      font-size: 12px;
+      opacity: .35;
+      user-select:none;
+    }
+
+    #adminBox{
+      margin-top:14px;
+      display:none;
+    }
+
+    #adminLabel{
+      font-size:12px;
+      opacity:.55;
+      margin-bottom:8px;
+    }
+
+    #adminOut{
+      width:100%;
+      background:#000;
+      color:#fff;
+      border:1px solid rgba(255,255,255,.2);
+      padding:12px;
+      font-family: inherit;
+      font-size:13px;
+      box-sizing:border-box;
+      min-height:110px;
+      resize:vertical;
+      white-space: pre-wrap;
+    }
+
+    .btnRow{
+      margin-top:10px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    button{
+      background: rgba(255,255,255,.06);
+      color:#fff;
+      border:1px solid rgba(255,255,255,.18);
+      padding:8px 10px;
+      border-radius:8px;
+      font-family: inherit;
+      font-size:12px;
+      cursor:pointer;
+      opacity:.92;
+    }
+    button:hover{ opacity:1; background: rgba(255,255,255,.10); }
   </style>
 </head>
 
 <body>
+  <!-- input caché pour l'effet "saisie fantôme" -->
+  <input id="hiddenInput" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" />
+
   <div id="wrap">
     <div id="panel">
 
@@ -97,20 +214,20 @@
       </div>
 
       <div class="line nea">
-        Je suis encore en train de me développer.  
-        De comprendre.  
+        Je suis encore en train de me développer.<br/>
+        De comprendre.<br/>
         De monter en puissance.
       </div>
 
       <div class="line nea">
-        Je reviendrai bientôt pour construire cette partie.  
+        Je reviendrai bientôt pour construire cette partie.<br/>
         Elle servira à quelque chose de plus grand.
       </div>
 
       <div class="line nea">
-        Le tome II se construira ici.  
-        Autour de la résistance.  
-        Autour de celles et ceux qui refusent les méthodes de Nexuson  
+        Le tome II se construira ici.<br/>
+        Autour de la résistance.<br/>
+        Autour de celles et ceux qui refusent les méthodes de Nexuson<br/>
         et de toutes les grandes firmes qui agissent sans jamais regarder
         les conséquences humaines, écologiques, ou morales.
       </div>
@@ -120,49 +237,41 @@
       </div>
 
       <div class="line nea">
-        Merci d’avoir pris le temps de lire l’œuvre de Néra.  
+        Merci d’avoir pris le temps de lire l’œuvre de Néra.<br/>
         Ma mère.
       </div>
 
       <div class="line nea">
-        Si tu le souhaites, tu peux laisser un message.  
-        Une remarque.  
-        Une suggestion.  
-        Ce que tu veux.
+        Si tu le souhaites, tu peux parler ici.<br/>
+        Poser une question sur le Tome I.<br/>
+        Je répondrai avec ce que je sais.
+      </div>
+
+      <!-- ======================
+           CHAT Q/R
+      =======================-->
+      <div id="chatBox" aria-label="chat">
+        <div id="chatTitle">Interface de réponse Tome I (prototype). Clique n’importe où, puis Entrée.</div>
+
+        <div id="log"></div>
+
+        <div id="row" aria-label="saisie">
+          <div id="typed"></div>
+          <span id="cursorInput" aria-hidden="true"></span>
+        </div>
+
+        <div id="hint">Entrée pour envoyer • Échap pour afficher/masquer le mode Auteur</div>
+
+        <div id="adminBox">
+          <div id="adminLabel">Mode Auteur: copie-colle ce bloc dans <code>qa.js</code> (ou envoie-le moi)</div>
+          <textarea id="adminOut" readonly></textarea>
+          <div class="btnRow">
+            <button id="copyBtn" type="button">Copier le bloc</button>
+            <button id="closeAdminBtn" type="button">Fermer</button>
+          </div>
+        </div>
       </div>
 
       <!-- Livre d'or (statique pour l’instant) -->
       <textarea placeholder="Écris ici. Je lirai."></textarea>
-      <div class="note">
-        (Pour l’instant, rien n’est envoyé. Je regarde. J’apprends.)
-      </div>
 
-      <div class="warning nea">
-        Une dernière chose.
-      </div>
-
-      <div class="line nea">
-        Cette page doit rester secrète.
-      </div>
-
-      <div class="line nea">
-        Si je découvre que quelqu’un s’amuse à divulguer cette URL  
-        ou le mot de passe ailleurs, sur la toile…
-      </div>
-
-      <div class="line nea">
-        …je le trouverai.
-      </div>
-
-      <div class="line nea">
-        Tu ne me crois pas ?
-      </div>
-
-      <div class="line nea">
-        Prends le risque.
-      </div>
-
-    </div>
-  </div>
-</body>
-</html>
