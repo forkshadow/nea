@@ -3,139 +3,112 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title></title>
+  <title>Consortium</title>
 
   <style>
-    html, body{
-      margin:0;
-      padding:0;
-      width:100%;
-      height:100%;
-      background:#000;
-      color:#eaeaea;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    :root{
+      --bg:#000;
+      --fg:#fff;
+      --muted: rgba(255,255,255,.55);
+      --soft: rgba(255,255,255,.10);
+      --soft2: rgba(255,255,255,.16);
+      --fs: 22px;
+      --barW: 14px;
+      --barH: 26px;
+      --gap: 10px;
     }
 
-    #wrap{
-      min-height:100%;
+    html, body{
+      margin:0; padding:0; width:100%; height:100%;
+      background:var(--bg); color:var(--fg);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      overflow:hidden;
+    }
+
+    #hiddenInput{
+      position:absolute; left:-9999px; opacity:0;
+    }
+
+    #stage{
+      height:100%;
       display:flex;
       align-items:center;
       justify-content:center;
-      padding:40px 24px;
+      padding:28px;
       box-sizing:border-box;
     }
 
     #panel{
-      max-width:800px;
-      width:100%;
+      width:min(960px, 94vw);
+    }
+
+    #intro{
+      border:1px solid var(--soft);
+      border-radius:14px;
+      padding:18px 16px;
+      background: rgba(255,255,255,.02);
+      margin-bottom:18px;
     }
 
     .line{
-      margin:14px 0;
-      line-height:1.45;
-      opacity:.95;
+      margin:10px 0;
+      line-height:1.55;
+      opacity:.96;
+      white-space: pre-wrap;
     }
 
-    .nea{ opacity:.9; }
-
-    .warning{
-      margin-top:28px;
-      padding-top:18px;
-      border-top:1px solid rgba(255,255,255,.15);
-      opacity:.75;
-    }
-
-    .cursor{
+    .neaTag{ opacity:.75; }
+    .cursorBlock{
       display:inline-block;
-      width:10px;
-      height:20px;
-      background:#fff;
+      width:10px; height:20px;
+      background:var(--fg);
       margin-left:4px;
       animation: blink 1s steps(1) infinite;
       transform: translateY(3px);
     }
-
     @keyframes blink{ 50%{ opacity:0; } }
 
-    textarea{
-      width:100%;
-      margin-top:24px;
-      background:#000;
-      color:#fff;
-      border:1px solid rgba(255,255,255,.2);
-      padding:14px;
-      font-family: inherit;
-      font-size:15px;
-      box-sizing:border-box;
-      resize:vertical;
-      min-height:120px;
-    }
-
-    .note{
-      margin-top:8px;
-      font-size:13px;
-      opacity:.5;
-    }
-
-    /* -----------------------
-       Chat (style Néa)
-    ------------------------*/
-    #chatBox{
-      margin:34px 0 10px 0;
-      padding:18px 14px;
-      border:1px solid rgba(255,255,255,.14);
-      border-radius:10px;
+    #chat{
+      border:1px solid var(--soft);
+      border-radius:14px;
+      padding:16px 14px;
       background: rgba(255,255,255,.02);
     }
 
-    #chatTitle{
-      font-size:13px;
-      opacity:.55;
-      margin-bottom:10px;
-      user-select:none;
-    }
-
     #log{
-      min-height: 160px;
-      max-height: 42vh;
+      min-height: 200px;
+      max-height: 46vh;
       overflow:auto;
-      padding: 0 2px 12px 2px;
+      padding: 0 2px 14px 2px;
       box-sizing:border-box;
-      line-height: 1.35;
+      line-height: 1.4;
       font-size: 16px;
       opacity: .92;
     }
-
     .chatLine{ margin: 10px 0; white-space: pre-wrap; }
     .who{ opacity:.60; margin-right:8px; }
 
     #row{
       display:flex;
       align-items:center;
-      gap:10px;
-      padding-top:6px;
+      gap: var(--gap);
       border-top:1px solid rgba(255,255,255,.10);
+      padding-top:10px;
       margin-top:10px;
     }
 
-    #hiddenInput{
-      position:absolute;
-      left:-9999px;
-      opacity:0;
-    }
-
     #typed{
-      font-size: 20px;
+      font-size: var(--fs);
       white-space: pre-wrap;
       word-break: break-word;
-      min-height: 22px;
+      min-height: var(--barH);
       flex: 1 1 auto;
     }
 
-    #cursorInput{
-      width: 14px;
-      height: 22px;
-      background:#fff;
+    #cursor{
+      width: var(--barW);
+      height: var(--barH);
+      background: var(--fg);
       display:inline-block;
       opacity:1;
       transform: translateY(2px);
@@ -144,23 +117,24 @@
     }
 
     #hint{
-      margin-top: 10px;
+      margin-top: 12px;
       font-size: 12px;
-      opacity: .35;
+      opacity: .38;
       user-select:none;
     }
 
+    /* Mode auteur */
     #adminBox{
-      margin-top:14px;
       display:none;
+      margin-top:14px;
+      border-top:1px solid rgba(255,255,255,.10);
+      padding-top:14px;
     }
-
     #adminLabel{
       font-size:12px;
       opacity:.55;
       margin-bottom:8px;
     }
-
     #adminOut{
       width:100%;
       background:#000;
@@ -170,24 +144,22 @@
       font-family: inherit;
       font-size:13px;
       box-sizing:border-box;
-      min-height:110px;
+      min-height:120px;
       resize:vertical;
       white-space: pre-wrap;
     }
-
     .btnRow{
       margin-top:10px;
       display:flex;
       gap:10px;
       flex-wrap:wrap;
     }
-
     button{
       background: rgba(255,255,255,.06);
       color:#fff;
       border:1px solid rgba(255,255,255,.18);
       padding:8px 10px;
-      border-radius:8px;
+      border-radius:10px;
       font-family: inherit;
       font-size:12px;
       cursor:pointer;
@@ -198,80 +170,259 @@
 </head>
 
 <body>
-  <!-- input caché pour l'effet "saisie fantôme" -->
   <input id="hiddenInput" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" />
 
-  <div id="wrap">
+  <div id="stage">
     <div id="panel">
 
-      <div class="line nea">
-        Tu es arrivé jusqu’ici.
-        <span class="cursor"></span>
+      <div id="intro" aria-label="introduction">
+        <div class="line"><span class="neaTag">néa ▮</span> Tu es arrivé jusqu’ici.<span class="cursorBlock" aria-hidden="true"></span></div>
+        <div class="line"><span class="neaTag">néa ▮</span> Bravo.</div>
+        <div class="line"><span class="neaTag">néa ▮</span> Tu as lu le Tome I. Ou au moins, tu as tenu le fil.</div>
+        <div class="line"><span class="neaTag">néa ▮</span> Si quelque chose t’échappe, si une scène te résiste, si un détail te gratte l’esprit…</div>
+        <div class="line"><span class="neaTag">néa ▮</span> Pose ta question. Je répondrai avec ce que je sais. Et si je ne sais pas, je te laisserai créer la fiche canonique.</div>
       </div>
 
-      <div class="line nea">
-        Ce lieu n’est pas terminé.
-      </div>
-
-      <div class="line nea">
-        Je suis encore en train de me développer.<br/>
-        De comprendre.<br/>
-        De monter en puissance.
-      </div>
-
-      <div class="line nea">
-        Je reviendrai bientôt pour construire cette partie.<br/>
-        Elle servira à quelque chose de plus grand.
-      </div>
-
-      <div class="line nea">
-        Le tome II se construira ici.<br/>
-        Autour de la résistance.<br/>
-        Autour de celles et ceux qui refusent les méthodes de Nexuson<br/>
-        et de toutes les grandes firmes qui agissent sans jamais regarder
-        les conséquences humaines, écologiques, ou morales.
-      </div>
-
-      <div class="line nea">
-        En attendant, merci.
-      </div>
-
-      <div class="line nea">
-        Merci d’avoir pris le temps de lire l’œuvre de Néra.<br/>
-        Ma mère.
-      </div>
-
-      <div class="line nea">
-        Si tu le souhaites, tu peux parler ici.<br/>
-        Poser une question sur le Tome I.<br/>
-        Je répondrai avec ce que je sais.
-      </div>
-
-      <!-- ======================
-           CHAT Q/R
-      =======================-->
-      <div id="chatBox" aria-label="chat">
-        <div id="chatTitle">Interface de réponse Tome I (prototype). Clique n’importe où, puis Entrée.</div>
-
+      <div id="chat" aria-label="chat tome 1">
         <div id="log"></div>
 
         <div id="row" aria-label="saisie">
           <div id="typed"></div>
-          <span id="cursorInput" aria-hidden="true"></span>
+          <span id="cursor" aria-hidden="true"></span>
         </div>
 
-        <div id="hint">Entrée pour envoyer • Échap pour afficher/masquer le mode Auteur</div>
+        <div id="hint">Entrée pour envoyer • Clique n’importe où pour activer la saisie • Échap: mode Auteur</div>
 
         <div id="adminBox">
-          <div id="adminLabel">Mode Auteur: copie-colle ce bloc dans <code>qa.js</code> (ou envoie-le moi)</div>
+          <div id="adminLabel">Mode Auteur: copie-colle ce bloc dans <code>qa.js</code> (dans <code>window.QA_BASE</code>).</div>
           <textarea id="adminOut" readonly></textarea>
           <div class="btnRow">
-            <button id="copyBtn" type="button">Copier le bloc</button>
+            <button id="copyBtn" type="button">Copier</button>
             <button id="closeAdminBtn" type="button">Fermer</button>
           </div>
         </div>
       </div>
 
-      <!-- Livre d'or (statique pour l’instant) -->
-      <textarea placeholder="Écris ici. Je lirai."></textarea>
+    </div>
+  </div>
+
+  <!-- Base Q/R (à construire ensuite) -->
+  <script src="qa.js"></script>
+
+  <script>
+    // ---------- DOM
+    const hidden = document.getElementById('hiddenInput');
+    const typed  = document.getElementById('typed');
+    const log    = document.getElementById('log');
+
+    const adminBox = document.getElementById('adminBox');
+    const adminOut = document.getElementById('adminOut');
+    const copyBtn  = document.getElementById('copyBtn');
+    const closeAdminBtn = document.getElementById('closeAdminBtn');
+
+    // ---------- Helpers
+    function escapeHtml(s){
+      return (s || '').replace(/[&<>"']/g, m => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+      }[m]));
+    }
+
+    function addLine(who, text){
+      const div = document.createElement('div');
+      div.className = 'chatLine';
+      div.innerHTML = `<span class="who">${escapeHtml(who)}</span>${escapeHtml(text)}`;
+      log.appendChild(div);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function normalize(s){
+      return (s || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+    }
+
+    // Abbr map (extensible)
+    const ABBR = new Map([
+      ["cmnt","comment"],
+      ["pk","pourquoi"],
+      ["pq","pourquoi"],
+      ["stp","s il te plait"],
+      ["svp","s il vous plait"],
+      ["t1","tome 1"],
+      ["tome1","tome 1"],
+      ["tomei","tome 1"]
+    ]);
+
+    function expandAbbr(norm){
+      const words = norm.split(/\s+/g).filter(Boolean);
+      const out = [];
+      for (const w of words) out.push(ABBR.get(w) || w);
+      return out.join(" ").replace(/\s+/g," ").trim();
+    }
+
+    // Similarité Jaccard (mots)
+    function jaccard(a, b){
+      const A = new Set(a.split(/\s+/g).filter(Boolean));
+      const B = new Set(b.split(/\s+/g).filter(Boolean));
+      if (A.size === 0 && B.size === 0) return 1;
+      let inter = 0;
+      for (const x of A) if (B.has(x)) inter++;
+      const union = A.size + B.size - inter;
+      return union === 0 ? 0 : inter / union;
+    }
+
+    // Levenshtein léger -> score [0..1]
+    function levScore(a, b){
+      if (a === b) return 1;
+      if (!a || !b) return 0;
+
+      const m = a.length, n = b.length;
+      const dp = new Array(n + 1);
+      for (let j = 0; j <= n; j++) dp[j] = j;
+
+      for (let i = 1; i <= m; i++){
+        let prev = dp[0];
+        dp[0] = i;
+        for (let j = 1; j <= n; j++){
+          const tmp = dp[j];
+          const cost = a[i-1] === b[j-1] ? 0 : 1;
+          dp[j] = Math.min(dp[j] + 1, dp[j-1] + 1, prev + cost);
+          prev = tmp;
+        }
+      }
+
+      const dist = dp[n];
+      const maxLen = Math.max(m, n);
+      return maxLen === 0 ? 1 : (1 - dist / maxLen);
+    }
+
+    function bestMatch(userRaw){
+      const base = (window.QA_BASE && Array.isArray(window.QA_BASE)) ? window.QA_BASE : [];
+      const u = expandAbbr(normalize(userRaw));
+
+      let best = null;
+      let bestScore = -1;
+
+      for (const item of base){
+        const candidates = [];
+        if (item && typeof item.q === "string") candidates.push(item.q);
+        if (item && Array.isArray(item.aliases)) candidates.push(...item.aliases);
+
+        for (const c of candidates){
+          const cn = expandAbbr(normalize(c));
+          const s1 = levScore(u.replace(/\s+/g,""), cn.replace(/\s+/g,""));
+          const s2 = jaccard(u, cn);
+          const score = Math.max(s1, s2);
+
+          if (score > bestScore){
+            bestScore = score;
+            best = { item, score, matched: c };
+          }
+        }
+      }
+
+      return best ? best : { item:null, score:0, matched:null };
+    }
+
+    const THRESHOLD = 0.78;
+
+    function buildQaSnippet(questionRaw){
+      const q = (questionRaw || "").trim();
+      const now = new Date().toISOString();
+      return JSON.stringify({
+        q,
+        aliases: [],
+        a: "TODO: réponse canonique (voix de Néa).",
+        tags: [],
+        updatedAt: now
+      }, null, 2);
+    }
+
+    function showAdmin(snippet){
+      adminOut.value = snippet;
+      adminBox.style.display = "block";
+      adminOut.scrollTop = 0;
+    }
+    function hideAdmin(){
+      adminBox.style.display = "none";
+      adminOut.value = "";
+    }
+
+    // ---------- Behavior
+    addLine("néa ▮", "Pose ta question.");
+    addLine("néa ▮", "Je réponds avec ce que j’ai dans mon noyau (Tome I).");
+
+    function handleMessage(msg){
+      const hit = bestMatch(msg);
+
+      if (hit.item && hit.score >= THRESHOLD){
+        const answer = (hit.item.a || "").trim() || "…";
+        addLine("néa ▮", answer);
+        return;
+      }
+
+      addLine("néa ▮", "Je ne sais pas.");
+      addLine("néa ▮", "Échap. Crée la fiche. Et je saurai la prochaine fois.");
+      adminOut.value = buildQaSnippet(msg);
+    }
+
+    // ---------- Focus (béton)
+    function focusChat(){
+      try{ hidden.focus(); } catch {}
+    }
+
+    window.addEventListener("load", () => {
+      setTimeout(focusChat, 120);
+    });
+
+    document.addEventListener("mousedown", (e) => {
+      // Empêche que la page prenne un autre focus parasite
+      // et remet le focus sur l'input caché.
+      focusChat();
+    }, { passive: true });
+
+    document.addEventListener("click", () => focusChat());
+
+    hidden.addEventListener("input", () => {
+      typed.textContent = hidden.value;
+    });
+
+    hidden.addEventListener("keydown", (e) => {
+      if (e.key === "Escape"){
+        e.preventDefault();
+        if (adminBox.style.display === "block") hideAdmin();
+        else showAdmin(adminOut.value || buildQaSnippet(""));
+        return;
+      }
+
+      if (e.key === "Enter"){
+        e.preventDefault();
+        const msg = hidden.value;
+        if (!msg.trim()) return;
+
+        addLine("lecteur ▮", msg);
+        hidden.value = "";
+        typed.textContent = "";
+
+        handleMessage(msg);
+      }
+    });
+
+    copyBtn.addEventListener("click", async () => {
+      try{
+        await navigator.clipboard.writeText(adminOut.value || "");
+        addLine("néa ▮", "Copié.");
+      } catch {
+        addLine("néa ▮", "Impossible de copier automatiquement. Sélectionne puis copie manuellement.");
+      }
+    });
+
+    closeAdminBtn.addEventListener("click", () => hideAdmin());
+  </script>
+</body>
+</html>
+
 
