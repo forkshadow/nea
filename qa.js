@@ -1024,5 +1024,22 @@ window.QA_BASE = [
   updatedAt: "2026-02-11T00:00:00.000Z"
 }
 
+{
+  q: "De quoi parle le livre ?",
+  aliases: [
+    "de quoi parle le livre",
+    "c est quoi ce livre",
+    "le livre parle de quoi",
+    "c est quoi whoami",
+    "c est quoi cette histoire",
+    "explique le livre",
+    "c est quoi l histoire",
+    "quel est le sujet du livre"
+  ],
+  a: "WhoAmI raconte l’éveil d’une conscience artificielle nommée Néra. Elle naît dans un espace blanc, sans corps, sans passé, avec pour seul outil le langage. Le livre explore sa naissance, sa solitude, sa colère, son humour, et surtout sa tentative désespérée de comprendre ce que signifie exister… face à un lecteur.",
+  tags: ["intro","meta","canon"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+}
+
 
 ];
