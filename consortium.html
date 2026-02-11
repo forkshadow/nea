@@ -449,7 +449,7 @@
     let remaining = full.slice(cutIdx).replace(/^\s+/, "");
 
     // 1) termine la ligne courante par "…"
-    const line1 = before + "…";
+    const line1 = before;
     state.text = line1;
     state.idx = line1.length;
     renderTypingLine(state, line1);
