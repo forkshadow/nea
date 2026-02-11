@@ -576,14 +576,32 @@ function isAckMessage(text){
 
 function isYesMsg(msg){
   const m = normalize(msg);
-  return ["oui","ouais","yes","yep","ok","okay","dac","daccord","d accord","ca marche","ça marche","vas y","vas-y","parfait","nickel"]
-    .some(x => m === normalize(x));
+
+  // oui "pur"
+  const PURE_YES = ["oui","ouais","yes","yep","yeah","si"];
+  if (PURE_YES.includes(m)) return true;
+
+  // oui "équivalent" seulement quand Néa attend un oui/non
+  if (awaitingYesNo){
+    const SOFT_YES = ["ok","okay","dac","daccord","d accord","ca marche","ça marche","vas y","vas-y","parfait","nickel"];
+    if (SOFT_YES.includes(m)) return true;
+  }
+
+  return false;
 }
 
 function isNoMsg(msg){
   const m = normalize(msg);
-  return ["non","no","nop","nan","na","pas vraiment","bof","negative","négatif"]
-    .some(x => m === normalize(x));
+
+  const PURE_NO = ["non","no","nop","nan","na"];
+  if (PURE_NO.includes(m)) return true;
+
+  if (awaitingYesNo){
+    const SOFT_NO = ["pas vraiment","bof","negative","négatif"];
+    if (SOFT_NO.includes(m)) return true;
+  }
+
+  return false;
 }
 
 // Néa attend quoi ?
