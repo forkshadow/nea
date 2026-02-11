@@ -1104,9 +1104,6 @@ window.QA_BASE = [
   a: "D’accord. Dis-moi ce qui te bloque: une phrase, une idée, ou un passage précis ?",
   tags: ["interaction","aide","clarification","nea"],
   updatedAt: "2026-02-11T00:00:00.000Z"
-},
-
-
-
+}
 
 ];
