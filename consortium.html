@@ -250,23 +250,29 @@
     return score>=0.78?best:null;
   }
 
-  function handleMessage(msg){
-    const thinking=addThinkingLine();
-    setTimeout(()=>{
-      const hit=bestMatch(msg);
-      if(hit){
-        replaceLine(thinking,"néa ▮",hit.a);
-      }else{
-        replaceLine(thinking,"néa ▮","Je ne sais pas.");
-        setTimeout(()=>{
-          addLine("néa ▮","Échap. Crée la fiche. Et je saurai la prochaine fois.");
-          adminOut.value=JSON.stringify({
-            q:msg,aliases:[],a:"TODO",tags:[],updatedAt:new Date().toISOString()
-          },null,2);
-        },400);
-      }
-    },RESP_DELAY_MS);
-  }
+function handleMessage(msg){
+  const thinkingEl = addThinking();          // on affiche "…" tout de suite
+  const delay = randDelay();                // latence variable par message
+
+  setTimeout(() => {
+    // on enlève la ligne "…"
+    if (thinkingEl && thinkingEl.parentNode) thinkingEl.parentNode.removeChild(thinkingEl);
+
+    // puis on répond
+    const hit = bestMatch(msg);
+
+    if (hit.item && hit.score >= THRESHOLD){
+      const answer = (hit.item.a || "").trim() || "…";
+      addLine("néa ▮", answer);
+      return;
+    }
+
+    addLine("néa ▮", "Je ne sais pas.");
+    addLine("néa ▮", "Échap. Crée la fiche. Et je saurai la prochaine fois.");
+    adminOut.value = buildQaSnippet(msg);
+  }, delay);
+}
+
 
   document.addEventListener("click",()=>hidden.focus());
   hidden.addEventListener("input",()=>typed.textContent=hidden.value);
