@@ -327,11 +327,11 @@
   }
 
   // -----------------------------
-  // Typing engine (pause/resume + patch en ligne)
+  // Typing engine (pause/resume + insertion tapée lettre par lettre)
   // -----------------------------
   let isTyping = false;
 
-  // activeTyping = { who, text, idx, div, timer, doneCb }
+  // activeTyping = { who, text, idx, div, timer, doneCb, isInjectedLock }
   let activeTyping = null;
 
   function renderTypingLine(state, shownText){
@@ -388,50 +388,57 @@
       idx: 0,
       div,
       timer: null,
-      doneCb: typeof onDone === "function" ? onDone : null
+      doneCb: typeof onDone === "function" ? onDone : null,
+      isInjectedLock: false
     };
     activeTyping = state;
     isTyping = true;
 
-    // initialise
     div.innerHTML = `<span class="who">${escapeHtml(who)}</span><span class="msg"></span>`;
     resumeTyping();
   }
 
-  // Patch “interruption” dans la même bulle
+  // Interruption: pause -> ajoute "…" (instantané) -> pause 1.5s -> insère réprimande+reprise DANS le texte
   async function injectInterruption(){
     if (!activeTyping) return;
 
-    pauseTyping();
-
     const state = activeTyping;
 
-    // texte déjà écrit + le reste à venir
+    // Empêche le spam d'interruptions en rafale pendant la même injection
+    if (state.isInjectedLock) return;
+    state.isInjectedLock = true;
+
+    pauseTyping();
+
     const before = state.text.slice(0, state.idx);
     const remaining = state.text.slice(state.idx);
 
-    const reprimand = pick(WAIT_SNARK);
-    const resume = pick(RESUME_PHRASES);
-
-    // 1) On affiche immédiatement: "... + recadrage" DANS LA MÊME BULLE
-    const snapped = before + "… " + reprimand;
+    // 1) On pose juste "…" tout de suite, et on gèle
+    const snapped = before + "…";
+    state.text = snapped;          // temporaire: on freeze visuellement sur "…"
+    state.idx = snapped.length;
     renderTypingLine(state, snapped);
 
-    // petite pause naturelle
-    await sleep(420 + Math.random()*520);
+    // 2) Latence avant réprimande (comme tu voulais)
+    await sleep(1500);
 
-    // 2) On reconstruit le texte complet à taper ensuite:
-    //    before + "… recadrage. " + "Donc je disais, " + remaining
-    const glue = " ";
-    const insert = " " + resume;
+    // 3) On reconstruit le flux COMPLET à taper ensuite (lettre par lettre via le moteur)
+    const reprimand = " " + pick(WAIT_SNARK);
+    const resume = " " + pick(RESUME_PHRASES);
 
-    state.text = snapped + glue + insert + remaining;
+    // On garde le "…" (déjà affiché), et on ajoute tout le reste derrière
+    const full = snapped + reprimand + resume + remaining;
 
-    // on considère que "snapped + glue + insert" est déjà affiché:
-    const alreadyShown = snapped + glue + insert;
-    state.idx = alreadyShown.length;
+    state.text = full;
 
-    renderTypingLine(state, alreadyShown);
+    // idx reste sur snapped.length, donc le moteur va taper reprimand+resume+remaining lettre par lettre
+    state.idx = snapped.length;
+
+    // mini-pause respiration (optionnelle, très légère)
+    await sleep(40);
+
+    // On relance
+    state.isInjectedLock = false;
     resumeTyping();
   }
 
@@ -480,8 +487,7 @@
     if (e.key === "Enter"){
       e.preventDefault();
 
-      // Si Néa tape: on NE crée PAS une nouvelle ligne,
-      // on injecte interruption + reprise DANS la même bulle.
+      // Si Néa tape: interruption intégrée à la même bulle
       if (isTyping && activeTyping){
         injectInterruption();
         return;
