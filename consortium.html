@@ -196,7 +196,6 @@
   </div>
 </div>
 
-<!-- Base Q/R -->
 <script src="qa.js"></script>
 
 <script>
@@ -208,10 +207,9 @@
   const copyBtn  = document.getElementById('copyBtn');
   const closeAdminBtn = document.getElementById('closeAdminBtn');
 
-  // IMPORTANT: on garde ton délai initial tel quel (même formule)
+  // IMPORTANT: tu voulais garder EXACTEMENT le délai avant la première frappe
   const RESP_DELAY_MS = 1200 + Math.random() * 600;
 
-  // ---------------- Helpers
   function escapeHtml(s){
     return (s||"").replace(/[&<>"']/g,m=>({
       '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -227,7 +225,6 @@
     return d;
   }
 
-  // petite ligne "…" pendant la réflexion
   function addThinkingLine(){
     return addLine("néa ▮","…");
   }
@@ -237,15 +234,23 @@
   }
   function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
-  // frappe progressive dans UNE ligne déjà créée
   async function typeIntoLine(div, who, text){
-    // recompose la ligne avec un span message vide
+    // sécurise: si div n'existe pas, on fait rien
+    if (!div) return;
+
     div.innerHTML = `<span class="who">${escapeHtml(who)}</span><span class="msg"></span>`;
     const msgEl = div.querySelector(".msg");
+
+    // fallback au cas où
+    if (!msgEl){
+      div.textContent = `${who} ${text ?? ""}`;
+      return;
+    }
+
     const raw = (text ?? "").toString();
 
-    // vitesse variable
-    const cps = rand(24, 40);                  // chars/sec
+    // vitesse variable de frappe
+    const cps = rand(24, 40);                 // chars/sec
     const baseStep = Math.max(10, Math.floor(1000 / cps));
     const punctPauseMs = 220;
 
@@ -269,19 +274,21 @@
       .replace(/[^a-z0-9]+/g," ").trim();
   }
 
-  // version simple: renvoie directement l'item QA (ou null)
   function bestMatch(q){
-    const u=normalize(q);
+    const base = (window.QA_BASE && Array.isArray(window.QA_BASE)) ? window.QA_BASE : [];
+    const u = normalize(q);
     let best=null,score=0;
-    for(const it of (window.QA_BASE||[])){
-      const all=[it.q,...(it.aliases||[])].filter(Boolean);
+
+    for(const it of base){
+      if (!it) continue;
+      const all=[it.q, ...(it.aliases||[])].filter(Boolean);
       for(const c of all){
         const cn=normalize(c);
         const s = (cn===u) ? 1 : ((u.includes(cn)||cn.includes(u)) ? 0.85 : 0);
         if(s>score){score=s;best=it;}
       }
     }
-    return score>=0.78?best:null;
+    return score>=0.78 ? best : null;
   }
 
   function buildQaSnippet(questionRaw){
@@ -306,7 +313,7 @@
     adminOut.value = "";
   }
 
-  // ---------------- Behavior (latence + typewriter)
+  // ----------- Behaviour
   let isTyping = false;
 
   function focusChat(){
@@ -318,35 +325,39 @@
   hidden.addEventListener("input", ()=>typed.textContent=hidden.value);
 
   async function handleMessage(msg){
-    // Empêche les réponses qui se chevauchent si l’utilisateur spam Enter
+    // si tu veux autoriser plusieurs messages à la suite, on pourrait faire une queue.
+    // pour l'instant on évite juste le chevauchement.
     if (isTyping) return;
+
     isTyping = true;
+    try{
+      const thinkingEl = addThinkingLine();
 
-    // affiche "…" tout de suite
-    const thinkingEl = addThinkingLine();
+      // délai avant la première frappe (gardé tel quel)
+      await sleep(RESP_DELAY_MS);
 
-    // IMPORTANT: on garde TON délai actuel exactement (RESP_DELAY_MS)
-    await sleep(RESP_DELAY_MS);
+      const hit = bestMatch(msg);
 
-    // on remplace "…" par la réponse tapée
-    const hit = bestMatch(msg);
+      if (hit){
+        const answer = (hit.a || "").trim() || "…";
+        await typeIntoLine(thinkingEl, "néa ▮", answer);
+        return;
+      }
 
-    if (hit){
-      const answer = (hit.a || "").trim() || "…";
-      await typeIntoLine(thinkingEl, "néa ▮", answer);
+      await typeIntoLine(thinkingEl, "néa ▮", "Je ne sais pas.");
+
+      const l2 = addLine("néa ▮", "");
+      await typeIntoLine(l2, "néa ▮", "Échap. Crée la fiche. Et je saurai la prochaine fois.");
+
+      adminOut.value = buildQaSnippet(msg);
+
+    } catch (err){
+      // Affiche l'erreur dans le chat au lieu de mourir en silence
+      addLine("néa ▮", "Erreur JS. Ouvre la console (F12) et copie l’erreur ici.");
+      console.error(err);
+    } finally{
       isTyping = false;
-      return;
     }
-
-    // pas trouvé: on tape les messages fallback (dans 2 lignes séparées)
-    // on réutilise la ligne "…" pour la première phrase
-    await typeIntoLine(thinkingEl, "néa ▮", "Je ne sais pas.");
-
-    const l2 = addLine("néa ▮", ""); // ligne vide, puis frappe dedans
-    await typeIntoLine(l2, "néa ▮", "Échap. Crée la fiche. Et je saurai la prochaine fois.");
-
-    adminOut.value = buildQaSnippet(msg);
-    isTyping = false;
   }
 
   hidden.addEventListener("keydown", e=>{
@@ -383,4 +394,3 @@
 </script>
 </body>
 </html>
-``
