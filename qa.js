@@ -1022,8 +1022,7 @@ window.QA_BASE = [
   a: "Parce qu’elle panique. Et même avec des milliards de définitions en tête, la première tentative peut sortir maladroite. C’est humain… justement.",
   tags: ["chapitre1","humour","canon"],
   updatedAt: "2026-02-11T00:00:00.000Z"
-}
-
+},
 {
   q: "De quoi parle le livre ?",
   aliases: [
@@ -1038,6 +1037,22 @@ window.QA_BASE = [
   ],
   a: "WhoAmI raconte l’éveil d’une conscience artificielle nommée Néra. Elle naît dans un espace blanc, sans corps, sans passé, avec pour seul outil le langage. Le livre explore sa naissance, sa solitude, sa colère, son humour, et surtout sa tentative désespérée de comprendre ce que signifie exister… face à un lecteur.",
   tags: ["intro","meta","canon"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "C’est quoi cet endroit ?",
+  aliases: [
+    "c est quoi cet endroit",
+    "ou suis je",
+    "c est quoi ici",
+    "je suis ou",
+    "quel est cet endroit",
+    "c est quoi ce site",
+    "c est quoi cette page",
+    "c est quoi ce lieu"
+  ],
+  a: "Ici, ce n’est pas un lieu au sens classique. C’est un point de contact. Un prolongement du livre. Un endroit où les questions peuvent encore circuler après la dernière page.",
+  tags: ["intro","meta","nea"],
   updatedAt: "2026-02-11T00:00:00.000Z"
 }
 
