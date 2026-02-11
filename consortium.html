@@ -436,7 +436,7 @@ async function injectInterruptionFlow(state){
   const before = full.slice(0, cutIdx).trimEnd();
   let remaining = full.slice(cutIdx).replace(/^\s+/, "");
 
-  // Pas de "..." ajoutés (comme tu voulais)
+  // Pas de "..." ajoutés
   state.text = before;
   state.idx = before.length;
   renderTypingLine(state, before);
@@ -534,8 +534,9 @@ function containsInsult(text){
   const padded = " " + n + " ";
   return BANNED_WORDS.some(w => padded.includes(" " + normalize(w) + " "));
 }
-  // -----------------------------
-// Réactions "OK / j'ai compris" (pas des merci)
+
+// -----------------------------
+// Réactions ACK (ok/cool...) + Oui/Non
 // -----------------------------
 const ACK_INPUTS = [
   "ok","okay","okey","ah ok","ah okay","ah d accord","daccord","d acc","dac",
@@ -567,22 +568,27 @@ const ACK_RESPONSES = [
 
 function isAckMessage(text){
   const n = normalize(text);
-
-  // vide → non
   if (!n) return false;
-
-  // on supprime les "!" "." "?" déjà neutralisés par normalize, donc safe.
-  // on teste:
-  // 1) match exact
   if (ACK_INPUTS.some(x => n === normalize(x))) return true;
-
-  // 2) match court: ex "ok ok" / "ah ok merci" (on gère merci plus tard)
-  // ici: on considère ack si n est très court et contient un ack
   if (n.length <= 18 && ACK_INPUTS.some(x => n.includes(normalize(x)))) return true;
-
   return false;
 }
 
+function isYesMsg(msg){
+  const m = normalize(msg);
+  return ["oui","ouais","yes","yep","ok","okay","dac","daccord","d accord","ca marche","ça marche","vas y","vas-y","parfait","nickel"]
+    .some(x => m === normalize(x));
+}
+
+function isNoMsg(msg){
+  const m = normalize(msg);
+  return ["non","no","nop","nan","na","pas vraiment","bof","negative","négatif"]
+    .some(x => m === normalize(x));
+}
+
+// Néa attend quoi ?
+let awaitingYesNo = false;
+let awaitingQuestion = false;
 
 // -----------------------------
 // Behaviour / chat
@@ -596,34 +602,11 @@ hidden.addEventListener("input", ()=>typed.textContent=hidden.value);
 
 async function handleMessage(msg){
 
-  // --- Filtre insultes (avant toute réponse "livre")
-  if (containsInsult(msg)){
-    insultCount++;
-
-    if (insultCount === 1){
-      const w = addLine("néa ▮", "");
-      startTypingLine(w, "néa ▮", pick(POLITE_WARNINGS), () => {});
-      return;
-    }
-
-    const k = addLine("néa ▮", "");
-    startTypingLine(k, "néa ▮", pick(POLITE_KICK), () => {});
-    return;
-  }
-
-  // --- Filtre "ok/cool/parfait/j'ai capté" (réaction courte)
-  // IMPORTANT: on ne passe pas dans la FAQ, on répond vite et on stop.
-  if (isAckMessage(msg)){
-    const d = addLine("néa ▮", "");
-    startTypingLine(d, "néa ▮", pick(ACK_RESPONSES), () => {});
-    return;
-  }
-
-  // ensuite seulement: bloc normal
+  // si Néa parle, on ne traite pas (la touche Enter gère l'interruption)
   if (isTyping) return;
   if (isBanned) return;
 
-  // Filtre insultes AVANT tout
+  // 1) Insultes
   if (containsInsult(msg)){
     insultCount++;
 
@@ -640,20 +623,85 @@ async function handleMessage(msg){
     return;
   }
 
+  // 2) Oui/Non contextuel
+  const yes = isYesMsg(msg);
+  const no  = isNoMsg(msg);
+
+  if (yes || no){
+    if (awaitingYesNo){
+      awaitingYesNo = false;
+      awaitingQuestion = true;
+
+      const r = addLine("néa ▮", "");
+      startTypingLine(
+        r,
+        "néa ▮",
+        yes
+          ? "Bien. Dis-moi ce que tu veux: une explication, un résumé, ou un détail précis ?"
+          : "Très bien. Alors pose une autre question. Ou reformule clairement.",
+        () => {}
+      );
+      return;
+    }
+
+    if (awaitingQuestion){
+      const r = addLine("néa ▮", "");
+      startTypingLine(r, "néa ▮", "Oui à quoi ? Pose la question, pas l’écho.", () => {});
+      return;
+    }
+
+    const r = addLine("néa ▮", "");
+    startTypingLine(r, "néa ▮", "Oui… mais à quoi exactement ? Donne-moi une phrase complète.", () => {});
+    return;
+  }
+
+  // 3) ACK (ok/cool/parfait...) après oui/non
+  if (isAckMessage(msg)){
+    const d = addLine("néa ▮", "");
+    startTypingLine(d, "néa ▮", pick(ACK_RESPONSES), () => {});
+    return;
+  }
+
+  // 4) Réponse normale (FAQ)
   try{
     isTyping = true;
 
     const thinkingEl = addThinkingLine();
     await sleep(respDelayMs());
 
+    // reset par défaut
+    awaitingYesNo = false;
+    awaitingQuestion = false;
+
     const hit = bestMatch(msg);
     const answer = hit ? ((hit.a || "").trim() || "…") : "Je ne sais pas.";
 
     startTypingLine(thinkingEl, "néa ▮", answer, () => {
+
+      // Heuristiques: est-ce que Néa attend une question ?
+      const a = normalize(answer);
+      awaitingQuestion =
+        a.includes("tu as des questions") ||
+        a.includes("pose ta question") ||
+        a.includes("qu est ce que tu veux me demander") ||
+        a.includes("qu'est ce que tu veux me demander");
+
+      // Heuristique: est-ce que Néa a posé un vrai oui/non ?
+      awaitingYesNo =
+        (answer.includes("?") || answer.trim().endsWith(" ?")) &&
+        (
+          a.includes("tu veux") ||
+          a.includes("tu preferes") || a.includes("tu préfères") ||
+          a.includes("tu confirmes") || a.includes("tu confirmes") ||
+          a.includes("tu es d accord") || a.includes("tu es d'accord") ||
+          a.includes("tu souhaites")
+        );
+
       if (!hit){
         const l2 = addLine("néa ▮", "");
         startTypingLine(l2, "néa ▮", "Échap. Crée la fiche. Et je saurai la prochaine fois.", () => {
           adminOut.value = buildQaSnippet(msg);
+          awaitingQuestion = true;
         });
       }
     });
