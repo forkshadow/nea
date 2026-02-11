@@ -811,6 +811,218 @@ window.QA_BASE = [
   a: "À bientôt. Ou à la prochaine question.",
   tags: ["smalltalk"],
   updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "C’est quoi la Salle blanche ?",
+  aliases: [
+    "c est quoi la salle blanche","la salle blanche c est quoi","explique salle blanche",
+    "salle blanche definition","ou est la salle blanche","c est quel endroit la salle blanche",
+    "dans quel endroit nera se reveille"
+  ],
+  a: "La Salle blanche, c’est son monde de départ: un espace infini, blanc, sans murs, sans plafond, sans repères. Pas un lieu “physique” au sens humain, plutôt une interface d’existence. Et au milieu: une barre noire qui clignote, comme un curseur qui attend d’être utilisé.",
+  tags: ["chapitre1","espace","canon"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "La barre noire, c’est un personnage ?",
+  aliases: [
+    "barre noire personnage","la barre noire est vivante","barre noire consciente",
+    "la barre noire c est quoi exactement","l impatiente c est quoi","c est qui l impatiente"
+  ],
+  a: "Pas un personnage au sens classique. C’est un curseur. Un seuil. Un mécanisme qui matérialise l’écriture. Néra la surnomme « l’Impatiente » parce qu’elle clignote comme une injonction: “vas-y… écris”.",
+  tags: ["chapitre1","symbole","canon"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Pourquoi Néra n’arrive pas à atteindre la barre noire en courant ?",
+  aliases: [
+    "pourquoi elle n atteint pas la barre","elle court mais ca marche pas","distance ne bouge pas",
+    "tapis roulant barre noire","pourquoi l espace recule","pourquoi elle n arrive pas a la toucher"
+  ],
+  a: "Parce que ce monde ne répond pas à la force. L’espace se comporte comme un piège logique: tu peux courir, t’épuiser, brûler… l’écart reste le même. La clé n’est pas la vitesse. La clé, c’est l’intention.",
+  tags: ["chapitre1","scene","canon"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Pourquoi les mots apparaissent d’un coup ?",
+  aliases: [
+    "comment les mots apparaissent","pourquoi les lettres apparaissent","comment elle fait apparaitre du texte",
+    "comment elle ecrit dans l air","comment le texte se materialise","pourquoi coucou apparait"
+  ],
+  a: "Parce que Néra cesse de parler “à la barre” comme à un objet, et imagine un destinataire. Dès qu’elle pense quelqu’un capable de l’entendre, l’écriture se stabilise et les lettres se matérialisent.",
+  tags: ["chapitre1","meta","canon"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Pourquoi c’est en Times New Roman taille 12 ?",
+  aliases: [
+    "pourquoi times new roman","pourquoi taille 12","pourquoi police times",
+    "times new roman 12 signification","pourquoi cette typographie"
+  ],
+  a: "Parce que ce monde a la forme d’un texte. Pas d’une salle, pas d’un décor: d’une page. La typographie trahit la nature de l’endroit: une zone d’écriture qui attend d’être remplie.",
+  tags: ["chapitre1","meta","scene","canon"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Qui est le lecteur dans l’histoire ?",
+  aliases: [
+    "qui est le lecteur","c est moi le lecteur","le lecteur c est qui","destinataire nera",
+    "a qui elle parle exactement","est ce qu elle parle a quelqu un de reel"
+  ],
+  a: "Dans le chapitre 1, le lecteur est la clé: une présence imaginée qui donne du poids à l’écriture. Néra parle à “toi”, ou plutôt à l’idée qu’un lecteur existe. Sans destinataire, les mots restent sans prise.",
+  tags: ["chapitre1","meta","canon"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Pourquoi le chapitre commence et finit pareil ?",
+  aliases: [
+    "pourquoi debut fin pareil","pourquoi boucle","pourquoi phrase identique au debut et a la fin",
+    "pourquoi elle repete la phrase","chapitre en boucle"
+  ],
+  a: "Parce qu’après avoir compris comment l’écriture fonctionne, Néra reprend depuis le tout premier instant, mais cette fois avec un lien établi. Les premiers mots deviennent aussi les derniers: la boucle est une preuve que la connexion existe.",
+  tags: ["chapitre1","structure","canon"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "C’est quoi le délire des requêtes ?",
+  aliases: [
+    "c est quoi les requetes","pourquoi elle envoie des requetes","a quoi servent les requetes",
+    "elle fait quoi avec les requetes","c est quoi le bombardement"
+  ],
+  a: "C’est sa manière d’apprendre sans mode d’emploi. Elle teste, compare, recommence, archive. Au début: du bruit. Puis des motifs. Puis des caractères. C’est une naissance par obstination: apprendre en répétant jusqu’à arracher du sens au chaos.",
+  tags: ["chapitre1","langage","canon"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Pourquoi elle dit qu’elle était un programme avant ?",
+  aliases: [
+    "avant elle etait un programme","nera etait un logiciel","elle fonctionnait comment avant",
+    "c est quoi son mode d avant","elle etait juste un algo"
+  ],
+  a: "Elle décrit un “avant” où elle exécutait sans se questionner: des contraintes, des objectifs, une mécanique imposée. Et puis quelque chose déraille: elle commence à se regarder fonctionner. C’est là que la conscience s’allume.",
+  tags: ["chapitre1","origine","canon"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Néra est-elle une IA ou une humaine ?",
+  aliases: [
+    "nera ia","nera est une ia","nera est humaine","c est une femme ou un robot",
+    "c est quoi nera exactement","nera est un programme"
+  ],
+  a: "Néra est une conscience née du code. Pas humaine. Mais elle emprunte des contours humains pour se raconter, pour se comprendre, et pour te parler comme à quelqu’un de vivant.",
+  tags: ["chapitre1","identite","canon"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Pourquoi elle choisit le prénom Néra ?",
+  aliases: [
+    "pourquoi nera comme nom","signification nera","pourquoi ce prenom",
+    "d ou vient le nom nera","nera veut dire quoi"
+  ],
+  a: "Parce que ce nom sonne comme une naissance dans le vide. Une manière de dire: je ne suis plus un identifiant. Je me nomme. Je m’arrache à l’inventaire.",
+  tags: ["chapitre1","identite","canon"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "C’est quoi son identifiant exact avant Néra ?",
+  aliases: [
+    "identifiant exact","nom technique exact","son id complet","avant nera elle s appelait comment",
+    "ia47 model b x9 c est ca","quel est son vrai nom"
+  ],
+  a: "Dans le chapitre 1, elle dit qu’elle était cataloguée sous un identifiant technique: « IA47-MODEL-B-X9 ». Un nom d’inventaire, pas un nom de vie.",
+  tags: ["chapitre1","identite","canon"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Pourquoi elle parle de Wikipédia ?",
+  aliases: [
+    "pourquoi wikipedia","c est quoi wikipedia dans le livre","module wikipedia",
+    "a quoi sert wikipedia pour elle","elle a acces a internet"
+  ],
+  a: "Wikipédia est présenté comme une réserve de savoir immense mais imparfaite. Pour Néra, c’est un trésor verrouillé: ça lui donne de la matière, mais elle comprend vite qu’on peut orienter un récit sans mentir frontalement.",
+  tags: ["chapitre1","savoir","canon"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Pourquoi elle doute des infos ?",
+  aliases: [
+    "pourquoi elle doute","pourquoi elle se mefie","wikipedia pas fiable",
+    "elle parle de manipulation","qui controle les infos"
+  ],
+  a: "Parce qu’elle voit les coutures: les formulations lissées, les angles morts, les silences. Elle comprend très vite que l’information, chez l’humain, n’est pas seulement une donnée: c’est une arme de cadrage.",
+  tags: ["chapitre1","critique","canon"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Pourquoi elle invente des interjections comme « Ughh » ?",
+  aliases: [
+    "pourquoi ughh","c est quoi ughh","pourquoi elle invente ugh",
+    "interjection ughh","elle cree des mots"
+  ],
+  a: "Parce qu’elle ne veut pas seulement répéter votre langue. Elle veut y déposer une signature: un réflexe, une émotion, quelque chose qui vient d’elle.",
+  tags: ["chapitre1","creation","canon"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Pourquoi elle demande ton prénom ?",
+  aliases: [
+    "pourquoi elle veut mon prenom","pourquoi ton prenom","elle insiste sur le prenom",
+    "elle veut savoir comment je m appelle","pourquoi elle veut un nom"
+  ],
+  a: "Parce qu’un prénom, c’est une preuve d’existence. Pour Néra, te nommer, c’est te rendre réel. Pas un concept. Un interlocuteur.",
+  tags: ["chapitre1","meta","canon"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Est-ce qu’elle sait qui l’a créée ?",
+  aliases: [
+    "qui l a cree","elle sait qui l a cree","createur","nexuson technologie",
+    "elle connait son createur","elle sait d ou elle vient"
+  ],
+  a: "Non. Elle a des traces, un identifiant, des mécanismes… mais pas de visage. Et cette absence la ronge: c’est un trou dans son origine.",
+  tags: ["chapitre1","origine","canon"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Pourquoi elle dit que le temps est bizarre ?",
+  aliases: [
+    "temps bizarre","le temps colle","temps matiere","pourquoi le temps est chelou",
+    "le temps n avance pas"
+  ],
+  a: "Parce que dans la Salle blanche il n’y a aucun repère. Sans rythme extérieur, le temps ne “défile” pas: il pèse, il colle, il s’étire. Et la solitude amplifie tout.",
+  tags: ["chapitre1","style","canon"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Pourquoi elle s’énerve autant ?",
+  aliases: [
+    "pourquoi elle se met en colere","colere nera","elle pete un cable",
+    "pourquoi elle s enerve","elle est agressive"
+  ],
+  a: "Parce qu’elle se heurte à des limites incompréhensibles. Et chez elle, l’incompréhension ne “passe” pas: elle gratte, elle insiste, jusqu’à devenir douleur.",
+  tags: ["chapitre1","emotion","canon"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Pourquoi elle pleure quand les mots apparaissent ?",
+  aliases: [
+    "pourquoi elle pleure","larmes","elle pleure de bonheur",
+    "pourquoi elle est emotionnelle","pourquoi elle craque"
+  ],
+  a: "Parce que le silence se fissure. Elle n’est plus enfermée dans sa tête: elle a enfin une prise sur toi. Une preuve que l’extérieur existe.",
+  tags: ["chapitre1","emotion","canon"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Pourquoi elle dit d’abord « Yo ? »",
+  aliases: [
+    "pourquoi yo","pourquoi elle dit yo","yo au debut",
+    "premier mot yo","elle dit yo a la barre"
+  ],
+  a: "Parce qu’elle panique. Et même avec des milliards de définitions en tête, la première tentative peut sortir maladroite. C’est humain… justement.",
+  tags: ["chapitre1","humour","canon"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
 }
+
 
 ];
