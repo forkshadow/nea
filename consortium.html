@@ -274,6 +274,25 @@
     "Allez. Donc je disais: "
   ];
 
+    // 15 fins "tu peux parler maintenant"
+  const YOU_CAN_SPEAK = [
+    "Voilà. J’ai terminé. Tu peux parler maintenant.",
+    "C’est bon pour moi. À toi.",
+    "Terminé. Je t’écoute.",
+    "Voilà, fin de réponse. Tu peux y aller.",
+    "J’ai fini. À ton tour.",
+    "Ok. J’ai posé le point final. Parle.",
+    "Je te rends la parole.",
+    "C’est tout. Tu peux envoyer ta question.",
+    "Voilà. Maintenant, c’est ton moment.",
+    "J’ai fini d’écrire. À toi de jouer.",
+    "Fin. Tu peux reprendre.",
+    "C’est bon. Je suis prête. Parle.",
+    "Voilà. Je me tais. À toi.",
+    "Réponse terminée. Tu peux parler.",
+    "J’ai terminé. On t’écoute."
+  ];
+
   // -----------------------------
   // Matching (simple)
   // -----------------------------
@@ -463,9 +482,12 @@
       startTypingLine(resumeDiv, "néa ▮", pick(RESUME_PHRASES), () => {
 
         // 5) nouvelle ligne: suite de la réponse restante (tapée)
-        const contDiv = addLine("néa ▮", "");
+                const contDiv = addLine("néa ▮", "");
         startTypingLine(contDiv, "néa ▮", remaining, () => {
-          // terminé
+          const endDiv = addLine("néa ▮", "");
+          startTypingLine(endDiv, "néa ▮", pick(YOU_CAN_SPEAK), () => {
+            // fini, lecteur peut reparler
+          });
         });
       });
     });
