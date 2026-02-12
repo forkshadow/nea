@@ -25,8 +25,6 @@
     overflow:hidden;
   }
 
-  #hiddenInput{ position:absolute; left:-9999px; opacity:0; }
-
   #stage{
     height:100%;
     display:flex;
@@ -78,31 +76,30 @@
 
   #row{
     display:flex;
-    align-items:center;
+    align-items:flex-end;
     gap: var(--gap);
     border-top:1px solid rgba(255,255,255,.10);
     padding-top:10px;
     margin-top:10px;
   }
 
-  #typed{
-    font-size: var(--fs);
-    white-space: pre-wrap;
-    word-break: break-word;
-    min-height: var(--barH);
+  #chatInput{
     flex: 1 1 auto;
+    min-height: var(--barH);
+    max-height: 180px;
+    border:0;
+    outline:0;
+    resize:none;
+    margin:0;
+    padding:0;
+    background:transparent;
+    color:var(--fg);
+    font: inherit;
+    font-size: var(--fs);
+    line-height:1.45;
+    caret-color:var(--fg);
+    overflow:auto;
   }
-
-  #cursor{
-    width: var(--barW);
-    height: var(--barH);
-    background: var(--fg);
-    display:inline-block;
-    transform: translateY(2px);
-    animation: blink 1s steps(1) infinite;
-  }
-
-  @keyframes blink{ 50%{ opacity:0; } }
 
   #hint{
     margin-top: 12px;
@@ -161,8 +158,6 @@
 </head>
 
 <body>
-<input id="hiddenInput" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"/>
-
 <div id="stage">
 <div id="panel">
 
@@ -176,8 +171,7 @@
     <div id="log"></div>
 
     <div id="row">
-      <div id="typed"></div>
-      <span id="cursor"></span>
+      <textarea id="chatInput" autocomplete="off" autocapitalize="off" spellcheck="false" rows="1" aria-label="Message"></textarea>
     </div>
 
     <div id="hint">Entrée pour envoyer • Clique pour activer • Échap : mode Auteur</div>
@@ -198,8 +192,7 @@
 <script src="qa.js"></script>
 
 <script>
-const hidden = document.getElementById('hiddenInput');
-const typed  = document.getElementById('typed');
+const input  = document.getElementById('chatInput');
 const log    = document.getElementById('log');
 const adminBox = document.getElementById('adminBox');
 const adminOut = document.getElementById('adminOut');
@@ -690,11 +683,16 @@ let awaitingQuestion = false;
 // Behaviour / chat
 // -----------------------------
 function focusChat(){
-  try{ hidden.focus(); } catch {}
+  try{ input.focus(); } catch {}
+}
+
+function autoresizeInput(){
+  input.style.height = "auto";
+  input.style.height = `${Math.min(input.scrollHeight, 180)}px`;
 }
 document.addEventListener("click", ()=>focusChat());
 window.addEventListener("load", ()=>setTimeout(focusChat, 120));
-hidden.addEventListener("input", ()=>typed.textContent=hidden.value);
+input.addEventListener("input", autoresizeInput);
 
 async function handleMessage(msg){
 
@@ -827,7 +825,7 @@ async function handleMessage(msg){
   }
 }
 
-hidden.addEventListener("keydown", (e)=>{
+input.addEventListener("keydown", (e)=>{
   if (e.key === "Enter"){
     e.preventDefault();
 
@@ -839,11 +837,12 @@ hidden.addEventListener("keydown", (e)=>{
 
     if (isBanned) return;
 
-    const msg = hidden.value.trim();
+    const msg = input.value.trim();
     if(!msg) return;
 
     addLine("lecteur ▮", msg);
-    hidden.value=""; typed.textContent="";
+    input.value="";
+    autoresizeInput();
     handleMessage(msg);
     return;
   }
@@ -865,6 +864,8 @@ copyBtn.addEventListener("click", async () => {
 });
 
 closeAdminBtn.addEventListener("click", () => hideAdmin());
+autoresizeInput();
+focusChat();
 </script>
 </body>
 </html>
