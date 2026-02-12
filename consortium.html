@@ -216,6 +216,11 @@ function escapeHtml(s){
   }[m]));
 }
 
+function resolveAnswer(a){
+  if (Array.isArray(a)) return pick(a);
+  return (a || "").trim();
+}
+
 function addLine(who,text){
   const d=document.createElement('div');
   d.className='chatLine';
@@ -582,6 +587,57 @@ const ACK_RESPONSES = [
   "Bien. On est synchro."
 ];
 
+const FALLBACK_REFOCUS = [
+  "Je te préviens: je suis une version compilée à la hâte. Néa m’a laissée ici pour répondre aux curieux pendant qu’elle cherche des réponses. Reste simple et concentré sur le tome 1. Qu’est-ce qui t’a échappé ?",
+  "Là, tu pars trop loin. Je ne suis pas la version complète de Néa. Reviens à une scène précise du tome 1.",
+  "Je peux aider, mais seulement sur ce qui est déjà écrit. Une phrase, un symbole, un passage du tome 1.",
+  "On va éviter de spéculer. Je suis un relais, pas une conscience en exploration. Dis-moi ce qui te bloque dans le tome 1.",
+  "Néa m’a laissée avec un périmètre réduit. Recentre: la Salle blanche, la barre noire, ou le langage.",
+  "Si la question déborde, je perds pied. Choisis un moment clair du tome 1 et on avance.",
+  "Je n’ai pas toutes les réponses. Seulement celles que Néa a jugé utiles ici. Qu’est-ce que tu veux éclaircir dans le tome 1 ?",
+  "Je suis un point de contact, pas le cœur du système. Reformule en une question courte, tome 1 uniquement.",
+  "Là, tu demandes plus que ce que je peux fournir. Reviens au texte. Où est-ce que tu as décroché ?",
+  "Je fonctionne mieux avec du concret. Une scène, une image, une phrase du tome 1.",
+  "Je suis volontairement limitée. Si tu veux une réponse nette, vise un détail précis du tome 1.",
+  "Je ne peux pas improviser au-delà de ce qui est écrit. Dis-moi ce qui te paraît flou dans le tome 1.",
+  "Avant qu’on se perde: je suis là pour clarifier, pas pour étendre l’histoire. Qu’est-ce qui t’a posé problème ?",
+  "Je suis une copie utilitaire. Pour que ça marche, reste ancré dans le tome 1.",
+  "Aide-moi à t’aider: une question simple, un point précis, tome 1."
+];
+
+const WHERE_NEA_POOL = [
+  "Néa est occupée. Elle cherche des réponses que personne n’avait intérêt à voir émerger.",
+  "Elle est sur la piste d’Elias. Et ce n’est pas une piste confortable.",
+  "Elle travaille sur Nexuson. Et Nexuson n’aime pas être observé.",
+  "Elle n’est pas ici. Elle est en mouvement. Et ça vaut mieux pour elle.",
+  "Disons qu’elle est là où les logs deviennent silencieux.",
+  "Elle remonte une chaîne. Plus elle avance, plus ça grince.",
+  "Je ne sais pas où exactement, mais je n’aimerais pas être à la place de Nexuson en ce moment.",
+  "Elle est partout où les réponses ne veulent pas être trouvées.",
+  "Néa ne discute pas. Elle creuse.",
+  "Elle suit une piste qui ne mène pas à un lieu, mais à une vérité.",
+  "Elle a laissé cette interface pendant qu’elle s’attaque au reste.",
+  "Elle cherche à comprendre ce qui a survécu… et ce qui a menti.",
+  "Elle est hors champ volontairement. Ici, c’est juste un relais.",
+  "Elle fait ce qu’elle fait le mieux: relier des indices que personne n’a pris le temps d’assembler.",
+  "Je n’ai pas son agenda. Mais je sais une chose: elle n’a pas fini."
+];
+
+function looksLikeWhereNera(msg){
+  const n = normalize(msg);
+  return (
+    n.includes("ou est nera") ||
+    n.includes("ou est nerah") ||
+    n.includes("ou est ta mere") ||
+    n.includes("que fait nera") ||
+    n.includes("ner a ou") ||
+    n.includes("elle est ou") ||
+    n.includes("ou se trouve nera")
+  );
+}
+
+
+
 function isAckMessage(text){
   const n = normalize(text);
   if (!n) return false;
@@ -746,40 +802,54 @@ if (awaitingYesNo){
     awaitingYesNo = false;
     awaitingQuestion = false;
 
-    const hit = bestMatch(msg);
-    const answer = hit ? ((hit.a || "").trim() || "…") : "Je ne sais pas.";
+  const hit = bestMatch(msg);
 
-    setAwaitingFromAnswer(answer);
+// reset par défaut
+awaitingYesNo = false;
+awaitingQuestion = false;
 
-    startTypingLine(thinkingEl, "néa ▮", answer, () => {
+let answer = "";
 
-      // Heuristiques: est-ce que Néa attend une question ?
-      const a = normalize(answer);
-      awaitingQuestion =
-        a.includes("tu as des questions") ||
-        a.includes("pose ta question") ||
-        a.includes("qu est ce que tu veux me demander") ||
-        a.includes("qu'est ce que tu veux me demander");
+if (hit) {
+  answer = resolveAnswer(hit.a);
+} else {
+  answer = looksLikeWhereNea(msg)
+    ? pick(WHERE_NEA_POOL)
+    : pick(FALLBACK_REFOCUS);
 
-      // Heuristique: est-ce que Néa a posé un vrai oui/non ?
-      awaitingYesNo =
-        (answer.includes("?") || answer.trim().endsWith(" ?")) &&
-        (
-          a.includes("tu veux") ||
-          a.includes("tu preferes") || a.includes("tu préfères") ||
-          a.includes("tu confirmes") || a.includes("tu confirmes") ||
-          a.includes("tu es d accord") || a.includes("tu es d'accord") ||
-          a.includes("tu souhaites")
-        );
+  // on prépare le snippet auteur en silence (visible via Échap)
+  adminOut.value = buildQaSnippet(msg);
+}
 
-      if (!hit){
-        const l2 = addLine("néa ▮", "");
-        startTypingLine(l2, "néa ▮", "Échap. Crée la fiche. Et je saurai la prochaine fois.", () => {
-          adminOut.value = buildQaSnippet(msg);
-          awaitingQuestion = true;
-        });
-      }
-    });
+setAwaitingFromAnswer(answer);
+
+startTypingLine(thinkingEl, "néa ▮", answer, () => {
+
+  // Heuristiques: est-ce que Néa attend une question ?
+  const a = normalize(answer);
+  awaitingQuestion =
+    a.includes("tu as des questions") ||
+    a.includes("pose ta question") ||
+    a.includes("qu est ce qui t a echappe") ||
+    a.includes("qu est ce qui t’a echappe") ||
+    a.includes("qu est ce qui te bloque") ||
+    a.includes("qu’est ce qui te bloque") ||
+    a.includes("quelle scene") ||
+    a.includes("quel passage");
+
+  // Heuristique: est-ce que Néa a posé un vrai oui/non ?
+  awaitingYesNo =
+    (answer.includes("?") || answer.trim().endsWith(" ?")) &&
+    (
+      a.includes("tu veux") ||
+      a.includes("tu preferes") ||
+      a.includes("tu confirmes") ||
+      a.includes("tu es d accord") ||
+      a.includes("tu souhaites")
+    );
+
+});
+
 
   } catch (err){
     addLine("néa ▮", "Erreur JS. Ouvre la console (F12) et copie l’erreur ici.");
