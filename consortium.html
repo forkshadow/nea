@@ -346,7 +346,6 @@ let isTyping = false;
 let activeTyping = null; // state
 let isBanned = false;
 
-
 function clearTimer(state){
   if (state && state.timer){
     clearTimeout(state.timer);
@@ -442,7 +441,6 @@ async function injectInterruptionFlow(state){
   const before = full.slice(0, cutIdx).trimEnd();
   let remaining = full.slice(cutIdx).replace(/^\s+/, "");
 
-  // Pas de "..." ajoutés
   state.text = before;
   state.idx = before.length;
   renderTypingLine(state, before);
@@ -640,9 +638,6 @@ function looksLikeWhereNea(msg){
   );
 }
 
-
-
-
 function isAckMessage(text){
   const n = normalize(text);
   if (!n) return false;
@@ -653,7 +648,6 @@ function isAckMessage(text){
 
 function setAwaitingFromAnswer(answer){
   const a = normalize(answer);
-  // déclencheurs simples (tu pourras affiner)
   awaitingYesNo =
     a.includes("oui ou non") ||
     a.includes("reponds par oui") ||
@@ -661,29 +655,23 @@ function setAwaitingFromAnswer(answer){
     a.includes("tu veux") ||
     a.includes("tu prefere") ||
     a.includes("tu preferes") ||
-    a.endsWith(" ?"); // option: agressif, mais marche souvent
+    a.endsWith(" ?");
 }
-
 
 function isYesMsg(msg){
   const m = normalize(msg);
-
-  // oui "pur"
   const PURE_YES = ["oui","ouais","yes","yep","yeah","si"];
   if (PURE_YES.includes(m)) return true;
 
-  // oui "équivalent" seulement quand Néa attend un oui/non
   if (awaitingYesNo){
     const SOFT_YES = ["ok","okay","dac","daccord","d accord","ca marche","ça marche","vas y","vas-y","parfait","nickel"];
     if (SOFT_YES.includes(m)) return true;
   }
-
   return false;
 }
 
 function isNoMsg(msg){
   const m = normalize(msg);
-
   const PURE_NO = ["non","no","nop","nan","na"];
   if (PURE_NO.includes(m)) return true;
 
@@ -691,7 +679,6 @@ function isNoMsg(msg){
     const SOFT_NO = ["pas vraiment","bof","negative","négatif"];
     if (SOFT_NO.includes(m)) return true;
   }
-
   return false;
 }
 
@@ -771,90 +758,66 @@ async function handleMessage(msg){
     return;
   }
 
-  // "oui/non" sans contexte -> filler (évite le bug social)
-if (!awaitingYesNo && isFillerYesNo(msg)){
-  const d = addLine("néa ▮", "");
-  startTypingLine(d, "néa ▮", pick(FILLER_YESNO_RESPONSES), () => {});
-  return;
-}
-
-// --- Filtre YES/NO (uniquement si Néa attend un oui/non)
-if (awaitingYesNo){
-  if (isYesMsg(msg)){
-    awaitingYesNo = false; // on consomme la réponse
+  // "oui/non" sans contexte -> filler
+  if (!awaitingYesNo && isFillerYesNo(msg)){
     const d = addLine("néa ▮", "");
-    startTypingLine(d, "néa ▮", "Ok.", () => {});
+    startTypingLine(d, "néa ▮", pick(FILLER_YESNO_RESPONSES), () => {});
     return;
   }
 
-  if (isNoMsg(msg)){
-    awaitingYesNo = false;
-    const d = addLine("néa ▮", "");
-    startTypingLine(d, "néa ▮", "Très bien.", () => {});
-    return;
-  }
-}
-
-  
-  // 4) Réponse normale (FAQ)
+  // 4) Réponse normale (FAQ + fallback)
   try{
     isTyping = true;
 
     const thinkingEl = addThinkingLine();
     await sleep(respDelayMs());
 
-    // reset par défaut
+    // reset par défaut (une seule fois)
     awaitingYesNo = false;
     awaitingQuestion = false;
 
-  const hit = bestMatch(msg);
+    const hit = bestMatch(msg);
 
-// reset par défaut
-awaitingYesNo = false;
-awaitingQuestion = false;
+    let answer = "";
 
-let answer = "";
+    if (hit) {
+      answer = resolveAnswer(hit.a);
+    } else {
+      answer = looksLikeWhereNea(msg)
+        ? pick(WHERE_NEA_POOL)
+        : pick(FALLBACK_REFOCUS);
 
-if (hit) {
-  answer = resolveAnswer(hit.a);
-} else {
-  answer = looksLikeWhereNea(msg)
-    ? pick(WHERE_NEA_POOL)
-    : pick(FALLBACK_REFOCUS);
+      // snippet auteur en silence
+      adminOut.value = buildQaSnippet(msg);
+    }
 
-  // on prépare le snippet auteur en silence (visible via Échap)
-  adminOut.value = buildQaSnippet(msg);
-}
+    setAwaitingFromAnswer(answer);
 
-setAwaitingFromAnswer(answer);
+    startTypingLine(thinkingEl, "néa ▮", answer, () => {
 
-startTypingLine(thinkingEl, "néa ▮", answer, () => {
+      const a = normalize(answer);
 
-  // Heuristiques: est-ce que Néa attend une question ?
-  const a = normalize(answer);
-  awaitingQuestion =
-    a.includes("tu as des questions") ||
-    a.includes("pose ta question") ||
-    a.includes("qu est ce qui t a echappe") ||
-    a.includes("qu est ce qui t’a echappe") ||
-    a.includes("qu est ce qui te bloque") ||
-    a.includes("qu’est ce qui te bloque") ||
-    a.includes("quelle scene") ||
-    a.includes("quel passage");
+      awaitingQuestion =
+        a.includes("tu as des questions") ||
+        a.includes("pose ta question") ||
+        a.includes("qu est ce qui t a echappe") ||
+        a.includes("qu est ce qui t’a echappe") ||
+        a.includes("qu est ce qui te bloque") ||
+        a.includes("qu’est ce qui te bloque") ||
+        a.includes("quelle scene") ||
+        a.includes("quel passage");
 
-  // Heuristique: est-ce que Néa a posé un vrai oui/non ?
-  awaitingYesNo =
-    (answer.includes("?") || answer.trim().endsWith(" ?")) &&
-    (
-      a.includes("tu veux") ||
-      a.includes("tu preferes") ||
-      a.includes("tu confirmes") ||
-      a.includes("tu es d accord") ||
-      a.includes("tu souhaites")
-    );
+      awaitingYesNo =
+        (answer.includes("?") || answer.trim().endsWith(" ?")) &&
+        (
+          a.includes("tu veux") ||
+          a.includes("tu preferes") ||
+          a.includes("tu confirmes") ||
+          a.includes("tu es d accord") ||
+          a.includes("tu souhaites")
+        );
 
-});
-
+    });
 
   } catch (err){
     addLine("néa ▮", "Erreur JS. Ouvre la console (F12) et copie l’erreur ici.");
@@ -868,7 +831,7 @@ hidden.addEventListener("keydown", (e)=>{
   if (e.key === "Enter"){
     e.preventDefault();
 
-    // si Néa parle: interruption (sans enregistrer)
+    // si Néa parle: interruption
     if (isTyping){
       requestInterruption();
       return;
