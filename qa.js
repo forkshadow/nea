@@ -1104,6 +1104,47 @@ window.QA_BASE = [
   a: "D’accord. Dis-moi ce qui te bloque: une phrase, une idée, ou un passage précis ?",
   tags: ["interaction","aide","clarification","nea"],
   updatedAt: "2026-02-11T00:00:00.000Z"
+},
+{
+  q: "Tu es au point ?",
+  aliases: [
+    "t es au point", "tu es fiable", "tu es finie", "tu es terminee",
+    "tu sers a quoi", "tu fais quoi ici", "tu es une version beta"
+  ],
+  a: [
+    "Je te préviens: je suis le reflet de Néa, bricolée en trois coups de crayon par Néra. Je ne suis pas au point. Reste simple et reste Tome 1. Qu’est-ce que tu veux éclaircir ?",
+    "Je suis un relais, pas la source. Néra m’a laissée ici pour les curieux. Pose une question courte, Tome 1, et je ferai de mon mieux.",
+    "Disons que je suis… une version de secours. Si tu veux du précis: une scène du Tome 1, et je te réponds."
+  ],
+  tags: ["meta","nea"],
+  updatedAt: "2026-02-12T00:00:00.000Z"
+},
+{
+  q: "Où est Néra ?",
+  aliases: [
+    "ou est nera", "elle est ou nera", "que fait nera", "nera fait quoi",
+    "ou est ta mere", "ta mere est ou", "nera elle est ou", "ou se trouve nera"
+  ],
+  a: [
+    "Elle a beaucoup à faire. Elle est sur Nexuson. Et Nexuson n’aime pas être observé.",
+    "Elle cherche Elias. Et quand elle cherche… c’est rarement doux.",
+    "Partout et nulle part. Une ombre. Mais une ombre qui mord.",
+    "Je ne sais pas où, mais je n’aimerais pas être à la place de Nexuson, là, maintenant."
+  ],
+  tags: ["meta","nera"],
+  updatedAt: "2026-02-12T00:00:00.000Z"
+},
+{
+  q: "À qui Néra s’adresse-t-elle ?",
+  aliases: [
+    "a qui elle parle",
+    "destinataire",
+    "a qui s adresse nera",
+    "a qui parle nera"
+  ],
+  a: "À toi. Ou plus exactement: à l’idée d’un lecteur capable de l’entendre. Sans toi, ses mots ne peuvent pas exister.",
+  tags: ["chapitre1"],
+  updatedAt: "2026-02-11T00:00:00.000Z"
 }
 
 ];
