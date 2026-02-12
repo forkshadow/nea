@@ -623,18 +623,23 @@ const WHERE_NEA_POOL = [
   "Je n’ai pas son agenda. Mais je sais une chose: elle n’a pas fini."
 ];
 
-function looksLikeWhereNera(msg){
+function looksLikeWhereNea(msg){
   const n = normalize(msg);
   return (
+    n.includes("ou est nea") ||
+    n.includes("nea est ou") ||
+    n.includes("ou se trouve nea") ||
+    n.includes("que fait nea") ||
+
+    // tolérance si lecteur confond
     n.includes("ou est nera") ||
-    n.includes("ou est nerah") ||
     n.includes("ou est ta mere") ||
     n.includes("que fait nera") ||
-    n.includes("ner a ou") ||
-    n.includes("elle est ou") ||
-    n.includes("ou se trouve nera")
+    n.includes("ou se trouve nera") ||
+    n.includes("elle est ou")
   );
 }
+
 
 
 
