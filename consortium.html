@@ -25,8 +25,6 @@
     overflow:hidden;
   }
 
-  #hiddenInput{ position:absolute; left:-9999px; opacity:0; }
-
   #stage{
     height:100%;
     display:flex;
@@ -37,23 +35,6 @@
   }
 
   #panel{ width:min(960px, 94vw); }
-
-  #intro{
-    border:1px solid var(--soft);
-    border-radius:14px;
-    padding:18px 16px;
-    background: rgba(255,255,255,.02);
-    margin-bottom:18px;
-  }
-
-  .line{
-    margin:10px 0;
-    line-height:1.55;
-    opacity:.96;
-    white-space: pre-wrap;
-  }
-
-  .neaTag{ opacity:.75; }
 
   #chat{
     border:1px solid var(--soft);
@@ -78,31 +59,30 @@
 
   #row{
     display:flex;
-    align-items:center;
+    align-items:flex-end;
     gap: var(--gap);
     border-top:1px solid rgba(255,255,255,.10);
     padding-top:10px;
     margin-top:10px;
   }
 
-  #typed{
-    font-size: var(--fs);
-    white-space: pre-wrap;
-    word-break: break-word;
-    min-height: var(--barH);
+  #chatInput{
     flex: 1 1 auto;
+    min-height: var(--barH);
+    max-height: 180px;
+    border:0;
+    outline:0;
+    resize:none;
+    margin:0;
+    padding:0;
+    background:transparent;
+    color:var(--fg);
+    font: inherit;
+    font-size: var(--fs);
+    line-height:1.45;
+    caret-color:var(--fg);
+    overflow:auto;
   }
-
-  #cursor{
-    width: var(--barW);
-    height: var(--barH);
-    background: var(--fg);
-    display:inline-block;
-    transform: translateY(2px);
-    animation: blink 1s steps(1) infinite;
-  }
-
-  @keyframes blink{ 50%{ opacity:0; } }
 
   #hint{
     margin-top: 12px;
@@ -161,23 +141,14 @@
 </head>
 
 <body>
-<input id="hiddenInput" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"/>
-
 <div id="stage">
 <div id="panel">
-
-  <div id="intro">
-    <div class="line"><span class="neaTag">néa ▮</span> Tu es arrivé jusqu’ici.</div>
-    <div class="line"><span class="neaTag">néa ▮</span> Bravo.</div>
-    <div class="line"><span class="neaTag">néa ▮</span> Si quelque chose t’échappe, pose ta question.</div>
-  </div>
 
   <div id="chat">
     <div id="log"></div>
 
     <div id="row">
-      <div id="typed"></div>
-      <span id="cursor"></span>
+      <textarea id="chatInput" autocomplete="off" autocapitalize="off" spellcheck="false" rows="1" aria-label="Message"></textarea>
     </div>
 
     <div id="hint">Entrée pour envoyer • Clique pour activer • Échap : mode Auteur</div>
@@ -198,13 +169,22 @@
 <script src="qa.js"></script>
 
 <script>
-const hidden = document.getElementById('hiddenInput');
-const typed  = document.getElementById('typed');
+const input  = document.getElementById('chatInput');
 const log    = document.getElementById('log');
 const adminBox = document.getElementById('adminBox');
 const adminOut = document.getElementById('adminOut');
 const copyBtn  = document.getElementById('copyBtn');
 const closeAdminBtn = document.getElementById('closeAdminBtn');
+const INTRO_MESSAGES = [
+  "Tu es arrivé jusqu’ici.",
+  "Bravo.",
+  "Si quelque chose t’échappe, pose ta question."
+];
+const CHAT_HISTORY_KEY = "nea:chat:history:v1";
+const INTRO_PLAYED_KEY = "nea:chat:introPlayed:v1";
+
+let introRunning = false;
+
 
 function respDelayMs(){ return 1200 + Math.random() * 600; } // à garder
 function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
@@ -227,11 +207,70 @@ function addLine(who,text){
   d.innerHTML=`<span class="who">${escapeHtml(who)}</span>${escapeHtml(text)}`;
   log.appendChild(d);
   log.scrollTop=log.scrollHeight;
+  saveChatHistory();
   return d;
 }
 
 function addThinkingLine(){
   return addLine("néa ▮","…");
+}
+
+function saveChatHistory(){
+  try {
+    localStorage.setItem(CHAT_HISTORY_KEY, log.innerHTML);
+  } catch {}
+}
+
+function restoreChatHistory(){
+  try {
+    const saved = localStorage.getItem(CHAT_HISTORY_KEY);
+    if (!saved) return false;
+    log.innerHTML = saved;
+    log.scrollTop = log.scrollHeight;
+    return log.children.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+function markIntroPlayed(){
+  try {
+    localStorage.setItem(INTRO_PLAYED_KEY, "1");
+  } catch {}
+}
+
+function hasIntroBeenPlayed(){
+  try {
+    return localStorage.getItem(INTRO_PLAYED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function playTypingLine(who, text){
+  return new Promise(resolve => {
+    const line = addLine(who, "");
+    startTypingLine(line, who, text, () => {
+      saveChatHistory();
+      resolve();
+    });
+  });
+}
+
+async function runIntroIfNeeded(){
+  const hasExistingHistory = log.children.length > 0;
+  if (hasExistingHistory || hasIntroBeenPlayed()) return;
+
+  introRunning = true;
+
+  for (const msg of INTRO_MESSAGES){
+    await sleep(respDelayMs());
+    await playTypingLine("néa ▮", msg);
+  }
+
+  introRunning = false;
+  markIntroPlayed();
+  saveChatHistory();
 }
 
 // 15 recadrages
@@ -690,11 +729,20 @@ let awaitingQuestion = false;
 // Behaviour / chat
 // -----------------------------
 function focusChat(){
-  try{ hidden.focus(); } catch {}
+  try{ input.focus(); } catch {}
+}
+
+function autoresizeInput(){
+  input.style.height = "auto";
+  input.style.height = `${Math.min(input.scrollHeight, 180)}px`;
 }
 document.addEventListener("click", ()=>focusChat());
-window.addEventListener("load", ()=>setTimeout(focusChat, 120));
-hidden.addEventListener("input", ()=>typed.textContent=hidden.value);
+window.addEventListener("load", async ()=>{
+  restoreChatHistory();
+  await runIntroIfNeeded();
+  setTimeout(focusChat, 120);
+});
+input.addEventListener("input", autoresizeInput);
 
 async function handleMessage(msg){
 
@@ -827,7 +875,7 @@ async function handleMessage(msg){
   }
 }
 
-hidden.addEventListener("keydown", (e)=>{
+input.addEventListener("keydown", (e)=>{
   if (e.key === "Enter"){
     e.preventDefault();
 
@@ -837,13 +885,15 @@ hidden.addEventListener("keydown", (e)=>{
       return;
     }
 
+    if (introRunning) return;
     if (isBanned) return;
 
-    const msg = hidden.value.trim();
+    const msg = input.value.trim();
     if(!msg) return;
 
     addLine("lecteur ▮", msg);
-    hidden.value=""; typed.textContent="";
+    input.value="";
+    autoresizeInput();
     handleMessage(msg);
     return;
   }
@@ -865,6 +915,8 @@ copyBtn.addEventListener("click", async () => {
 });
 
 closeAdminBtn.addEventListener("click", () => hideAdmin());
+autoresizeInput();
+focusChat();
 </script>
 </body>
 </html>
