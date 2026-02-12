@@ -34,38 +34,35 @@
     }
     .line{ margin: 10px 0; white-space: pre-wrap; }
     .who{ opacity:.70; margin-right:8px; }
-    #row{ display:flex; align-items:center; gap: var(--gap); }
-    #hiddenInput{ position:absolute; left:-9999px; opacity:0; }
-    #typed{
-      font-size: var(--fs);
-      white-space: pre-wrap;
-      word-break: break-word;
+    #row{ display:flex; align-items:flex-end; gap: var(--gap); }
+    #chatInput{
+      flex: 1 1 auto;
       min-height: var(--barH);
+      max-height: 140px;
+      border: 0;
+      outline: 0;
+      resize: none;
+      padding: 0;
+      margin: 0;
+      background: transparent;
+      color: var(--fg);
+      font: inherit;
+      font-size: var(--fs);
+      line-height: 1.35;
+      caret-color: var(--fg);
+      overflow: auto;
     }
-    #cursor{
-      width: var(--barW);
-      height: var(--barH);
-      background: var(--fg);
-      display:inline-block;
-      opacity:1;
-      transform: translateY(2px);
-      flex: 0 0 auto;
-    }
-    .blink{ animation: blink 1s steps(1) infinite; }
-    @keyframes blink{ 50%{ opacity:0; } }
     #hint{ margin-top: 14px; font-size: 14px; opacity: .35; }
   </style>
 </head>
 
 <body>
-  <input id="hiddenInput" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" />
   <div id="stage">
     <div id="panel">
       <div id="log"></div>
 
       <div id="row" aria-label="saisie">
-        <div id="typed"></div>
-        <span id="cursor" class="blink" aria-hidden="true"></span>
+        <textarea id="chatInput" autocomplete="off" autocapitalize="off" spellcheck="false" rows="1" aria-label="Message"></textarea>
       </div>
 
       <div id="hint">Entrée pour envoyer • Clique n’importe où pour activer la saisie</div>
@@ -74,10 +71,8 @@
 
   <script>
     // ----- DOM
-    const hidden = document.getElementById('hiddenInput');
-    const typed  = document.getElementById('typed');
+    const input  = document.getElementById('chatInput');
     const log    = document.getElementById('log');
-    const cursor = document.getElementById('cursor');
 
     // ----- Helpers
     const RESP_DELAY = 2000;
@@ -293,10 +288,13 @@
 
     function lockOut(){
       state = STATE.LOCKED;
-      hidden.disabled = true;
-      cursor.classList.remove("blink");
-      cursor.style.opacity = "0.15";
-      typed.textContent = "";
+      input.value = "";
+      input.disabled = true;
+    }
+
+    function autoresizeInput(){
+      input.style.height = "auto";
+      input.style.height = `${Math.min(input.scrollHeight, 140)}px`;
     }
 
     function containsAny(normalized, phrases){
@@ -415,30 +413,29 @@
 
     // ----- UX input
     document.addEventListener('click', () => {
-      if (state !== STATE.LOCKED) hidden.focus();
+      if (state !== STATE.LOCKED) input.focus();
     });
 
-    hidden.addEventListener('input', () => {
-      typed.textContent = hidden.value;
-    });
+    input.addEventListener('input', autoresizeInput);
 
-    hidden.addEventListener('keydown', (e) => {
+    input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter'){
         e.preventDefault();
         if (state === STATE.LOCKED) return;
 
-        const msg = hidden.value;
+        const msg = input.value;
         if (msg.trim().length === 0) return;
 
         addLine("lecteur ▮", msg);
-        hidden.value = '';
-        typed.textContent = '';
+        input.value = '';
+        autoresizeInput();
 
         handleMessage(msg);
       }
     });
 
-    hidden.focus();
+    autoresizeInput();
+    input.focus();
   </script>
 </body>
 </html>
