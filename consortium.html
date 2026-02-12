@@ -737,11 +737,7 @@ function autoresizeInput(){
   input.style.height = `${Math.min(input.scrollHeight, 180)}px`;
 }
 document.addEventListener("click", ()=>focusChat());
-window.addEventListener("load", async ()=>{
-  restoreChatHistory();
-  await runIntroIfNeeded();
-  setTimeout(focusChat, 120);
-});
+window.addEventListener("load", ()=>setTimeout(focusChat, 120));
 input.addEventListener("input", autoresizeInput);
 
 async function handleMessage(msg){
