@@ -36,23 +36,6 @@
 
   #panel{ width:min(960px, 94vw); }
 
-  #intro{
-    border:1px solid var(--soft);
-    border-radius:14px;
-    padding:18px 16px;
-    background: rgba(255,255,255,.02);
-    margin-bottom:18px;
-  }
-
-  .line{
-    margin:10px 0;
-    line-height:1.55;
-    opacity:.96;
-    white-space: pre-wrap;
-  }
-
-  .neaTag{ opacity:.75; }
-
   #chat{
     border:1px solid var(--soft);
     border-radius:14px;
@@ -161,12 +144,6 @@
 <div id="stage">
 <div id="panel">
 
-  <div id="intro">
-    <div class="line"><span class="neaTag">néa ▮</span> Tu es arrivé jusqu’ici.</div>
-    <div class="line"><span class="neaTag">néa ▮</span> Bravo.</div>
-    <div class="line"><span class="neaTag">néa ▮</span> Si quelque chose t’échappe, pose ta question.</div>
-  </div>
-
   <div id="chat">
     <div id="log"></div>
 
@@ -198,6 +175,16 @@ const adminBox = document.getElementById('adminBox');
 const adminOut = document.getElementById('adminOut');
 const copyBtn  = document.getElementById('copyBtn');
 const closeAdminBtn = document.getElementById('closeAdminBtn');
+const INTRO_MESSAGES = [
+  "Tu es arrivé jusqu’ici.",
+  "Bravo.",
+  "Si quelque chose t’échappe, pose ta question."
+];
+const CHAT_HISTORY_KEY = "nea:chat:history:v1";
+const INTRO_PLAYED_KEY = "nea:chat:introPlayed:v1";
+
+let introRunning = false;
+
 
 function respDelayMs(){ return 1200 + Math.random() * 600; } // à garder
 function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
@@ -220,11 +207,70 @@ function addLine(who,text){
   d.innerHTML=`<span class="who">${escapeHtml(who)}</span>${escapeHtml(text)}`;
   log.appendChild(d);
   log.scrollTop=log.scrollHeight;
+  saveChatHistory();
   return d;
 }
 
 function addThinkingLine(){
   return addLine("néa ▮","…");
+}
+
+function saveChatHistory(){
+  try {
+    localStorage.setItem(CHAT_HISTORY_KEY, log.innerHTML);
+  } catch {}
+}
+
+function restoreChatHistory(){
+  try {
+    const saved = localStorage.getItem(CHAT_HISTORY_KEY);
+    if (!saved) return false;
+    log.innerHTML = saved;
+    log.scrollTop = log.scrollHeight;
+    return log.children.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+function markIntroPlayed(){
+  try {
+    localStorage.setItem(INTRO_PLAYED_KEY, "1");
+  } catch {}
+}
+
+function hasIntroBeenPlayed(){
+  try {
+    return localStorage.getItem(INTRO_PLAYED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function playTypingLine(who, text){
+  return new Promise(resolve => {
+    const line = addLine(who, "");
+    startTypingLine(line, who, text, () => {
+      saveChatHistory();
+      resolve();
+    });
+  });
+}
+
+async function runIntroIfNeeded(){
+  const hasExistingHistory = log.children.length > 0;
+  if (hasExistingHistory || hasIntroBeenPlayed()) return;
+
+  introRunning = true;
+
+  for (const msg of INTRO_MESSAGES){
+    await sleep(respDelayMs());
+    await playTypingLine("néa ▮", msg);
+  }
+
+  introRunning = false;
+  markIntroPlayed();
+  saveChatHistory();
 }
 
 // 15 recadrages
@@ -835,6 +881,7 @@ input.addEventListener("keydown", (e)=>{
       return;
     }
 
+    if (introRunning) return;
     if (isBanned) return;
 
     const msg = input.value.trim();
