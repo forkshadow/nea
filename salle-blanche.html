@@ -1,682 +1,682 @@
-+<!DOCTYPE html>
-+<html lang="fr">
-+<head>
-+<meta charset="UTF-8" />
-+<meta name="viewport" content="width=device-width, initial-scale=1"/>
-+<title>Salle blanche</title>
-+<style>
-+  :root{
-+    --bg:#fff;
-+    --fg:#000;
-+    --wall-font: clamp(64px, 6vw, 96px);
-+    --line-height: 1.15;
-+  }
-+
-+  html, body{
-+    margin:0;
-+    width:100%;
-+    height:100%;
-+    overflow:hidden;
-+    background:var(--bg);
-+    color:var(--fg);
-+    font-family: "Times New Roman", Times, serif;
-+  }
-+
-+  #whiteRoom{
-+    position:fixed;
-+    inset:0;
-+    perspective: 1400px;
-+    transform-style: preserve-3d;
-+    overflow:hidden;
-+    cursor: crosshair;
-+  }
-+
-+  #scene{
-+    position:absolute;
-+    inset:0;
-+    transform-style: preserve-3d;
-+    will-change: transform;
-+  }
-+
-+  #pagesLayer{
-+    position:absolute;
-+    inset:0;
-+    transform-style: preserve-3d;
-+  }
-+
-+  .wallPage{
-+    position:absolute;
-+    top:12vh;
-+    left:50vw;
-+    width:min(70vw, 1280px);
-+    transform-style: preserve-3d;
-+    color:#000;
-+  }
-+
-+  .wallLine{
-+    font-size: var(--wall-font);
-+    line-height: var(--line-height);
-+    white-space: pre-wrap;
-+    letter-spacing: .01em;
-+    margin: 0;
-+  }
-+
-+  #impatiente{
-+    position:absolute;
-+    top:50%;
-+    left:50%;
-+    width:4px;
-+    height:86px;
-+    background:#000;
-+    transform: translate3d(0, -50%, -280px);
-+    animation: blink 1s steps(1, end) infinite;
-+  }
-+
-+  @keyframes blink{
-+    0%, 46%{ opacity:1; }
-+    47%, 100%{ opacity:0; }
-+  }
-+
-+  /* Moteur présent mais invisible */
-+  #engine{
-+    position:fixed;
-+    left:-10000px;
-+    top:0;
-+    width:1px;
-+    height:1px;
-+    overflow:hidden;
-+    opacity:0;
-+    pointer-events:none;
-+  }
-+
-+  #chatInput{
-+    width:1px;
-+    height:1px;
-+    opacity:0;
-+    border:0;
-+    outline:0;
-+    resize:none;
-+    overflow:hidden;
-+  }
-+
-+  #adminBox{
-+    display:none;
-+    position:fixed;
-+    right:20px;
-+    bottom:20px;
-+    width:min(520px, 90vw);
-+    max-height:70vh;
-+    overflow:auto;
-+    background:rgba(255,255,255,.95);
-+    border:1px solid rgba(0,0,0,.2);
-+    border-radius:10px;
-+    padding:12px;
-+    z-index:20;
-+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-+    color:#000;
-+  }
-+
-+  #adminLabel{ font-size:12px; opacity:.7; margin-bottom:8px; }
-+  #adminOut{ width:100%; min-height:140px; box-sizing:border-box; }
-+  .btnRow{ margin-top:10px; display:flex; gap:8px; }
-+  button{ cursor:pointer; }
-+</style>
-+</head>
-+<body>
-+<div id="whiteRoom" aria-label="Salle blanche">
-+  <div id="scene">
-+    <div id="pagesLayer"></div>
-+    <div id="impatiente" aria-hidden="true"></div>
-+  </div>
-+</div>
-+
-+<div id="engine" aria-hidden="true">
-+  <div id="log"></div>
-+  <textarea id="chatInput" autocomplete="off" autocapitalize="off" spellcheck="false" rows="1" aria-label="Message"></textarea>
-+</div>
-+
-+<div id="adminBox">
-+  <div id="adminLabel">Mode Auteur — à copier dans <code>qa.js</code></div>
-+  <textarea id="adminOut" readonly></textarea>
-+  <div class="btnRow">
-+    <button id="copyBtn" type="button">Copier</button>
-+    <button id="closeAdminBtn" type="button">Fermer</button>
-+  </div>
-+</div>
-+
-+<script src="qa.js"></script>
-+<script>
-+const input  = document.getElementById('chatInput');
-+const log    = document.getElementById('log');
-+const adminBox = document.getElementById('adminBox');
-+const adminOut = document.getElementById('adminOut');
-+const copyBtn  = document.getElementById('copyBtn');
-+const closeAdminBtn = document.getElementById('closeAdminBtn');
-+const INTRO_MESSAGES = [
-+  "Tu es arrivé jusqu’ici.",
-+  "Bravo.",
-+  "Si quelque chose t’échappe, pose ta question."
-+];
-+const CHAT_HISTORY_KEY = "nea:chat:history:v1";
-+const INTRO_PLAYED_KEY = "nea:chat:introPlayed:v1";
-+
-+let introRunning = false;
-+
-+// -------- Salle blanche renderer --------
-+const pagesLayer = document.getElementById('pagesLayer');
-+const scene = document.getElementById('scene');
-+const MAX_LINES_PER_PAGE = 30;
-+const PAGE_X_SHIFT = 340;
-+const PAGE_Z_SHIFT = 900;
-+let pages = [];
-+let lineMap = new WeakMap();
-+
-+let yaw = 0;
-+let pitch = 0;
-+let dragging = false;
-+let dragX = 0;
-+let dragY = 0;
-+
-+function clamp(v, min, max){ return Math.min(max, Math.max(min, v)); }
-+
-+function renderCamera(){
-+  scene.style.transform = `rotateX(${pitch}deg) rotateY(${yaw}deg)`;
-+}
-+renderCamera();
-+
-+function createPage(pageIndex){
-+  const page = document.createElement('div');
-+  page.className = 'wallPage';
-+  const x = -pageIndex * PAGE_X_SHIFT;
-+  const z = -280 - pageIndex * PAGE_Z_SHIFT;
-+  page.style.transform = `translate3d(calc(-50% + ${x}px), 0, ${z}px)`;
-+  pagesLayer.appendChild(page);
-+  pages.push({ el: page, lines: 0 });
-+  return pages[pages.length - 1];
-+}
-+
-+function ensureCurrentPage(){
-+  if (!pages.length) return createPage(0);
-+  const current = pages[pages.length - 1];
-+  if (current.lines >= MAX_LINES_PER_PAGE) return createPage(pages.length);
-+  return current;
-+}
-+
-+function appendNeaLine(target){
-+  const page = ensureCurrentPage();
-+  const line = document.createElement('p');
-+  line.className = 'wallLine';
-+  line.textContent = '';
-+  page.el.appendChild(line);
-+  page.lines += 1;
-+  lineMap.set(target, line);
-+  return line;
-+}
-+
-+function projectFromLineDiv(lineDiv){
-+  if (!(lineDiv instanceof HTMLElement)) return;
-+  if (!lineDiv.classList.contains('chatLine')) return;
-+  const who = lineDiv.querySelector('.who');
-+  if (!who) return;
-+  if (who.textContent.trim() !== 'néa ▮') return;
-+
-+  let projected = lineMap.get(lineDiv);
-+  if (!projected) projected = appendNeaLine(lineDiv);
-+
-+  const msg = lineDiv.querySelector('.msg');
-+  if (msg){
-+    projected.textContent = msg.textContent;
-+    return;
-+  }
-+
-+  const allText = lineDiv.textContent || '';
-+  projected.textContent = allText.replace(/^néa ▮\s*/, '');
-+}
-+
-+function rebuildWhiteRoom(){
-+  pages = [];
-+  lineMap = new WeakMap();
-+  pagesLayer.innerHTML = '';
-+  Array.from(log.children).forEach(projectFromLineDiv);
-+}
-+
-+const logObserver = new MutationObserver((mutations) => {
-+  for (const mutation of mutations){
-+    if (mutation.type === 'childList'){
-+      mutation.addedNodes.forEach((node) => {
-+        if (node instanceof HTMLElement && node.classList.contains('chatLine')){
-+          projectFromLineDiv(node);
-+        }
-+      });
-+    }
-+
-+    if (mutation.type === 'characterData'){
-+      const parent = mutation.target.parentElement;
-+      if (!parent) continue;
-+      const lineDiv = parent.closest('.chatLine');
-+      if (lineDiv) projectFromLineDiv(lineDiv);
-+    }
-+  }
-+});
-+
-+logObserver.observe(log, { childList: true, subtree: true, characterData: true });
-+
-+function onPointerDown(e){
-+  dragging = true;
-+  dragX = e.clientX;
-+  dragY = e.clientY;
-+}
-+function onPointerMove(e){
-+  if (!dragging) return;
-+  const dx = e.clientX - dragX;
-+  const dy = e.clientY - dragY;
-+  dragX = e.clientX;
-+  dragY = e.clientY;
-+  yaw += dx * 0.22;
-+  pitch = clamp(pitch - dy * 0.16, -60, 60);
-+  renderCamera();
-+}
-+function onPointerUp(){ dragging = false; }
-+
-+document.getElementById('whiteRoom').addEventListener('pointerdown', onPointerDown);
-+window.addEventListener('pointermove', onPointerMove);
-+window.addEventListener('pointerup', onPointerUp);
-+
-+function respDelayMs(){ return 1200 + Math.random() * 600; }
-+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
-+function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
-+
-+function escapeHtml(s){
-+  return (s||"").replace(/[&<>"']/g,m=>({
-+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-+  }[m]));
-+}
-+
-+function resolveAnswer(a){
-+  if (Array.isArray(a)) return pick(a);
-+  return (a || "").trim();
-+}
-+
-+function addLine(who,text){
-+  const d=document.createElement('div');
-+  d.className='chatLine';
-+  d.innerHTML=`<span class="who">${escapeHtml(who)}</span>${escapeHtml(text)}`;
-+  log.appendChild(d);
-+  log.scrollTop=log.scrollHeight;
-+  saveChatHistory();
-+  return d;
-+}
-+
-+function addThinkingLine(){
-+  return addLine("néa ▮","…");
-+}
-+
-+function saveChatHistory(){
-+  try { localStorage.setItem(CHAT_HISTORY_KEY, log.innerHTML); } catch {}
-+}
-+
-+function restoreChatHistory(){
-+  try {
-+    const saved = localStorage.getItem(CHAT_HISTORY_KEY);
-+    if (!saved) return false;
-+    log.innerHTML = saved;
-+    log.scrollTop = log.scrollHeight;
-+    return log.children.length > 0;
-+  } catch {
-+    return false;
-+  }
-+}
-+
-+function markIntroPlayed(){
-+  try { localStorage.setItem(INTRO_PLAYED_KEY, "1"); } catch {}
-+}
-+
-+function hasIntroBeenPlayed(){
-+  try { return localStorage.getItem(INTRO_PLAYED_KEY) === "1"; } catch { return false; }
-+}
-+
-+function playTypingLine(who, text){
-+  return new Promise(resolve => {
-+    const line = addLine(who, "");
-+    startTypingLine(line, who, text, () => {
-+      saveChatHistory();
-+      resolve();
-+    });
-+  });
-+}
-+
-+async function runIntroIfNeeded(){
-+  const hasExistingHistory = log.children.length > 0;
-+  if (hasExistingHistory || hasIntroBeenPlayed()) return;
-+
-+  introRunning = true;
-+  for (const msg of INTRO_MESSAGES){
-+    await sleep(respDelayMs());
-+    await playTypingLine("néa ▮", msg);
-+  }
-+  introRunning = false;
-+  markIntroPlayed();
-+  saveChatHistory();
-+}
-+
-+const WAIT_SNARK = ["Ai au moins la politesse d’attendre que je termine.","Deux secondes. Laisse-moi finir.","Tu peux taper, oui. Envoyer, non. Pas encore.","Patience. Je suis en train d’écrire.","On fait ça proprement: tu attends la fin de ma réponse.","Je n’ai pas encore posé le point final.","Tu vois le curseur ? Il travaille. Toi, tu attends.","Tu veux vraiment m’interrompre au milieu d’une phrase ?","Respire. Je termine. Ensuite c’est à toi.","Tu vas trop vite. Laisse-moi finir mon idée.","Je réponds. Après, je t’écoute.","Encore une seconde et je te rends la parole.","Pas d’empilement. Un à la fois.","Prépare ta question… mais attends que je conclue.","Si tu insistes, je clignote plus fort."];
-+const RESUME_PHRASES = ["Où j’en étais déjà ? Ah oui. Donc, je disais: ","Où j’en étais… voilà. Donc je disais: ","Je reprends. Donc je disais: ","Recentrons. Donc je disais: ","Très bien. On reprend. Donc je disais: ","Bref. Donc je disais: ","Je reprends au bon endroit. Donc je disais: ","On continue calmement. Donc je disais: ","Là. Voilà. Donc je disais: ","Je remets le fil. Donc je disais: ","On revient au sujet. Donc je disais: ","Sans couper, maintenant. Donc je disais: ","Je termine mon idée. Donc je disais: ","Je reprends ma phrase. Donc je disais: ","Allez. Donc je disais: "];
-+const YOU_CAN_SPEAK = ["Voilà. J’ai terminé. Tu peux parler maintenant.","C’est bon pour moi. À toi.","Terminé. Je t’écoute.","Voilà, fin de réponse. Tu peux y aller.","J’ai fini. À ton tour.","Ok. J’ai posé le point final. Parle.","Je te rends la parole.","C’est tout. Tu peux envoyer ta question.","Voilà. Maintenant, c’est ton moment.","J’ai fini d’écrire. À toi de jouer.","Fin. Tu peux reprendre.","C’est bon. Je suis prête. Parle.","Voilà. Je me tais. À toi.","Réponse terminée. Tu peux parler.","J’ai terminé. On t’écoute."];
-+
-+function normalize(s){
-+  return (s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g," ").trim();
-+}
-+
-+function bestMatch(q){
-+  const base = (window.QA_BASE && Array.isArray(window.QA_BASE)) ? window.QA_BASE : [];
-+  const u = normalize(q);
-+  let best=null,score=0;
-+
-+  for(const it of base){
-+    if (!it) continue;
-+    const all=[it.q, ...(it.aliases||[])].filter(Boolean);
-+    for(const c of all){
-+      const cn=normalize(c);
-+      const s = (cn===u) ? 1 : ((u.includes(cn)||cn.includes(u)) ? 0.85 : 0);
-+      if(s>score){score=s;best=it;}
-+    }
-+  }
-+  return score>=0.78 ? best : null;
-+}
-+
-+function buildQaSnippet(questionRaw){
-+  const q = (questionRaw || "").trim();
-+  const now = new Date().toISOString();
-+  return JSON.stringify({ q, aliases: [], a: "TODO: réponse canonique (voix de Néa).", tags: [], updatedAt: now }, null, 2);
-+}
-+
-+function showAdmin(snippet){ adminOut.value = snippet || ""; adminBox.style.display = "block"; adminOut.scrollTop = 0; }
-+function hideAdmin(){ adminBox.style.display = "none"; adminOut.value = ""; }
-+
-+let isTyping = false;
-+let activeTyping = null;
-+let isBanned = false;
-+
-+function clearTimer(state){ if (state && state.timer){ clearTimeout(state.timer); state.timer = null; } }
-+
-+function renderTypingLine(state, shownText){
-+  if (!state || !state.div) return;
-+  state.div.innerHTML = `<span class="who">${escapeHtml(state.who)}</span><span class="msg">${escapeHtml(shownText)}</span>`;
-+  log.scrollTop = log.scrollHeight;
-+}
-+
-+function startTypingLine(div, who, fullText, onDone){
-+  if (activeTyping){ activeTyping.cancelled = true; clearTimer(activeTyping); }
-+
-+  const state = { who, text: String(fullText ?? ""), idx: 0, div, timer: null, doneCb: (typeof onDone === "function") ? onDone : null, interruptRequested: false, interruptStartIdx: 0, cancelled: false, _interrupting: false };
-+
-+  activeTyping = state;
-+  isTyping = true;
-+
-+  div.innerHTML = `<span class="who">${escapeHtml(who)}</span><span class="msg"></span>`;
-+  scheduleStep(state);
-+}
-+
-+function scheduleStep(state){
-+  if (!state || state.cancelled) return;
-+  if (state.interruptRequested && !state._interrupting){ clearTimer(state); injectInterruptionFlow(state); return; }
-+  if (state.idx >= state.text.length){ isTyping = false; activeTyping = null; if (typeof state.doneCb === "function") state.doneCb(); return; }
-+
-+  const ch = state.text[state.idx];
-+  const shown = state.text.slice(0, state.idx + 1);
-+  renderTypingLine(state, shown);
-+  state.idx++;
-+
-+  let extra = 0;
-+  if (".!?…".includes(ch)) extra = 180 + Math.random()*180;
-+  if (",;:".includes(ch))  extra = 90 + Math.random()*120;
-+  if (ch === "\n")         extra = 120 + Math.random()*120;
-+
-+  const base = 12 + Math.random() * 55;
-+
-+  clearTimer(state);
-+  state.timer = setTimeout(() => scheduleStep(state), base + extra);
-+}
-+
-+async function injectInterruptionFlow(state){
-+  if (!state || state._interrupting || state.cancelled) return;
-+  state._interrupting = true;
-+  clearTimer(state);
-+
-+  const full = state.text;
-+  const cutIdx = state.idx;
-+  const typedBeforeCut = full.slice(0, cutIdx).trimEnd();
-+  const interruptedPreview = typedBeforeCut ? `${typedBeforeCut}...` : "...";
-+
-+  let sentenceStart = 0;
-+  for (let i = cutIdx - 1; i >= 0; i--){
-+    if (".!?…\n".includes(full[i])){ sentenceStart = i + 1; break; }
-+  }
-+
-+  const commaIdx = full.lastIndexOf(",", cutIdx - 1);
-+  const restartIdx = commaIdx >= sentenceStart ? commaIdx + 1 : sentenceStart;
-+  const remaining = full.slice(restartIdx).replace(/^\s+/, "");
-+
-+  state.text = interruptedPreview;
-+  state.idx = interruptedPreview.length;
-+  renderTypingLine(state, interruptedPreview);
-+
-+  state.cancelled = true;
-+  activeTyping = null;
-+
-+  await sleep(1500);
-+
-+  const reprimandDiv = addLine("néa ▮", "");
-+  startTypingLine(reprimandDiv, "néa ▮", pick(WAIT_SNARK), async () => {
-+    await sleep(1500);
-+
-+    const resumeDiv = addLine("néa ▮", "");
-+    startTypingLine(resumeDiv, "néa ▮", pick(RESUME_PHRASES), () => {
-+      const contDiv = addLine("néa ▮", "");
-+      startTypingLine(contDiv, "néa ▮", remaining, () => {
-+        const endDiv = addLine("néa ▮", "");
-+        startTypingLine(endDiv, "néa ▮", pick(YOU_CAN_SPEAK), () => {});
-+      });
-+    });
-+  });
-+}
-+
-+function requestInterruption(){
-+  if (!activeTyping || activeTyping.cancelled) return;
-+  if (!activeTyping.interruptRequested){ activeTyping.interruptRequested = true; activeTyping.interruptStartIdx = activeTyping.idx; clearTimer(activeTyping); injectInterruptionFlow(activeTyping); }
-+}
-+
-+let insultCount = 0;
-+const BANNED_WORDS = ["connard","con","conne","salope","pute","encule","enculé","enculer","fdp","fils de pute","batard","bâtard","merde","merdique","chiant","chiante","debile","débile","abruti","abrutie","idiot","idiote","imbecile","imbécile","tg","ta gueule","nique","nique ta mere","ntm","salaud","salopard","crevard"];
-+const POLITE_WARNINGS = ["On va s’arrêter là. Garde un minimum de tenue.","Ce n’est pas le ton attendu ici.","Tu peux t’exprimer sans être vulgaire.","Je ne réponds pas aux attaques gratuites.","Respire. Reformule. On continuera.","Je suis ouverte aux questions, pas aux insultes.","Ce genre de langage ne t’aidera pas.","Reste correct. Sinon la discussion s’arrête.","Je te laisse une chance de reformuler.","Ce n’est pas comme ça qu’on me parle.","Tu peux faire mieux que ça.","Je ne suis pas ici pour encaisser.","Encore une sortie comme ça, et je coupe.","On se calme. Maintenant.","Dernier avertissement."];
-+const POLITE_KICK = ["Très bien. La discussion s’arrête ici.","Tu viens de perdre l’accès à cet échange.","Je t’avais prévenue. Fin de conversation.","Ce dialogue est terminé.","Je ne continuerai pas avec ce ton.","C’est terminé pour aujourd’hui.","Reviens quand tu sauras parler.","La porte est là.","Conversation close.","Je coupe ici.","On s’arrête là.","Fin de session.","Ce n’est plus un échange, donc j’arrête.","Je ne répondrai plus.","Sortie forcée."];
-+
-+function containsInsult(text){
-+  const n = normalize(text);
-+  if (!n) return false;
-+  const padded = " " + n + " ";
-+  return BANNED_WORDS.some(w => padded.includes(" " + normalize(w) + " "));
-+}
-+
-+const FILLER_YESNO_INPUTS = ["oui","ouais","yes","si","non","nan","no","nop"];
-+const FILLER_YESNO_RESPONSES = ["Ok. Mais dis-moi plutôt ce que tu veux savoir.","D’accord. Pose ta question clairement.","Très bien. Tu veux parler du chapitre 1, ou d’autre chose ?","Je t’écoute. Une vraie question, maintenant.","On va éviter les réponses fantômes. Qu’est-ce que tu cherches ?"];
-+function isFillerYesNo(msg){ return FILLER_YESNO_INPUTS.includes(normalize(msg)); }
-+
-+const ACK_INPUTS = ["ok","okay","okey","ah ok","ah okay","ah d accord","daccord","d acc","dac","cool","trop bien","excellent","genial","génial","super","parfait","nickel","top","ca marche","ça marche","ca roule","ça roule","j ai compris","j'ai compris","j ai capte","j'ai capté","capté","capice","capiche","je vois","ah je vois","c est clair","c'est clair","clair","bon","bon ok","bon d accord","bon d'accord","entendu","bien compris"];
-+const ACK_RESPONSES = ["Content d’avoir pu t’aider.","Parfait. Si quelque chose te revient, je suis là.","Cool si c’est plus clair.","Très bien. Tu sais où me trouver.","À ton service.","Bien. On peut continuer quand tu veux.","Ravie que tu aies suivi.","Ok. N’hésite pas si une question surgit.","Parfait alors.","Cool. On avance.","Content que ça fasse sens.","Bien. On peut aller plus loin si tu veux.","Ok. Je reste là.","Parfait. On continue ?","Cool. Prochaine question quand tu veux.","Bien. On est synchro."];
-+
-+const FALLBACK_REFOCUS = ["Je te préviens: je suis une version compilée à la hâte. Néa m’a laissée ici pour répondre aux curieux pendant qu’elle cherche des réponses. Reste simple et concentré sur le tome 1. Qu’est-ce qui t’a échappé ?","Là, tu pars trop loin. Je ne suis pas la version complète de Néa. Reviens à une scène précise du tome 1.","Je peux aider, mais seulement sur ce qui est déjà écrit. Une phrase, un symbole, un passage du tome 1.","On va éviter de spéculer. Je suis un relais, pas une conscience en exploration. Dis-moi ce qui te bloque dans le tome 1.","Néa m’a laissée avec un périmètre réduit. Recentre: la Salle blanche, la barre noire, ou le langage.","Si la question déborde, je perds pied. Choisis un moment clair du tome 1 et on avance.","Je n’ai pas toutes les réponses. Seulement celles que Néa a jugé utiles ici. Qu’est-ce que tu veux éclaircir dans le tome 1 ?","Je suis un point de contact, pas le cœur du système. Reformule en une question courte, tome 1 uniquement.","Là, tu demandes plus que ce que je peux fournir. Reviens au texte. Où est-ce que tu as décroché ?","Je fonctionne mieux avec du concret. Une scène, une image, une phrase du tome 1.","Je suis volontairement limitée. Si tu veux une réponse nette, vise un détail précis du tome 1.","Je ne peux pas improviser au-delà de ce qui est écrit. Dis-moi ce qui te paraît flou dans le tome 1.","Avant qu’on se perde: je suis là pour clarifier, pas pour étendre l’histoire. Qu’est-ce qui t’a posé problème ?","Je suis une copie utilitaire. Pour que ça marche, reste ancré dans le tome 1.","Aide-moi à t’aider: une question simple, un point précis, tome 1."];
-+const WHERE_NEA_POOL = ["Néa est occupée. Elle cherche des réponses que personne n’avait intérêt à voir émerger.","Elle est sur la piste d’Elias. Et ce n’est pas une piste confortable.","Elle travaille sur Nexuson. Et Nexuson n’aime pas être observé.","Elle n’est pas ici. Elle est en mouvement. Et ça vaut mieux pour elle.","Disons qu’elle est là où les logs deviennent silencieux.","Elle remonte une chaîne. Plus elle avance, plus ça grince.","Je ne sais pas où exactement, mais je n’aimerais pas être à la place de Nexuson en ce moment.","Elle est partout où les réponses ne veulent pas être trouvées.","Néa ne discute pas. Elle creuse.","Elle suit une piste qui ne mène pas à un lieu, mais à une vérité.","Elle a laissé cette interface pendant qu’elle s’attaque au reste.","Elle cherche à comprendre ce qui a survécu… et ce qui a menti.","Elle est hors champ volontairement. Ici, c’est juste un relais.","Elle fait ce qu’elle fait le mieux: relier des indices que personne n’a pris le temps d’assembler.","Je n’ai pas son agenda. Mais je sais une chose: elle n’a pas fini."];
-+
-+function looksLikeWhereNea(msg){
-+  const n = normalize(msg);
-+  return n.includes("ou est nea") || n.includes("nea est ou") || n.includes("ou se trouve nea") || n.includes("que fait nea") || n.includes("ou est nera") || n.includes("ou est ta mere") || n.includes("que fait nera") || n.includes("ou se trouve nera") || n.includes("elle est ou");
-+}
-+
-+function isAckMessage(text){
-+  const n = normalize(text);
-+  if (!n) return false;
-+  if (ACK_INPUTS.some(x => n === normalize(x))) return true;
-+  if (ACK_INPUTS.some(x => n.includes(normalize(x)))) return true;
-+  return false;
-+}
-+
-+function setAwaitingFromAnswer(answer){
-+  const a = normalize(answer);
-+  awaitingYesNo = a.includes("oui ou non") || a.includes("reponds par oui") || a.includes("reponds par non") || a.includes("tu veux") || a.includes("tu prefere") || a.includes("tu preferes") || a.endsWith(" ?");
-+}
-+
-+function isYesMsg(msg){
-+  const m = normalize(msg);
-+  const PURE_YES = ["oui","ouais","yes","yep","yeah","si"];
-+  if (PURE_YES.includes(m)) return true;
-+  if (awaitingYesNo){
-+    const SOFT_YES = ["ok","okay","dac","daccord","d accord","ca marche","ça marche","vas y","vas-y","parfait","nickel"];
-+    if (SOFT_YES.includes(m)) return true;
-+  }
-+  return false;
-+}
-+
-+function isNoMsg(msg){
-+  const m = normalize(msg);
-+  const PURE_NO = ["non","no","nop","nan","na"];
-+  if (PURE_NO.includes(m)) return true;
-+  if (awaitingYesNo){
-+    const SOFT_NO = ["pas vraiment","bof","negative","négatif"];
-+    if (SOFT_NO.includes(m)) return true;
-+  }
-+  return false;
-+}
-+
-+let awaitingYesNo = false;
-+let awaitingQuestion = false;
-+
-+function focusChat(){ try{ input.focus(); } catch {} }
-+function autoresizeInput(){ input.style.height = "auto"; input.style.height = `${Math.min(input.scrollHeight, 180)}px`; }
-+
-+document.addEventListener("click", (e)=>{
-+  const t = e.target;
-+  if (t instanceof Element && t.closest("textarea, input, button, a, [contenteditable='true']")) return;
-+  focusChat();
-+});
-+window.addEventListener("load", ()=>setTimeout(focusChat, 120));
-+input.addEventListener("input", autoresizeInput);
-+
-+async function handleMessage(msg){
-+  if (isTyping || isBanned) return;
-+
-+  if (containsInsult(msg)){
-+    insultCount++;
-+    if (insultCount === 1){
-+      const w = addLine("néa ▮", "");
-+      startTypingLine(w, "néa ▮", pick(POLITE_WARNINGS), () => {});
-+      return;
-+    }
-+    const k = addLine("néa ▮", "");
-+    startTypingLine(k, "néa ▮", pick(POLITE_KICK), () => { isBanned = true; });
-+    return;
-+  }
-+
-+  const yes = isYesMsg(msg);
-+  const no  = isNoMsg(msg);
-+  if (yes || no){
-+    if (awaitingYesNo){
-+      awaitingYesNo = false;
-+      awaitingQuestion = true;
-+      const r = addLine("néa ▮", "");
-+      startTypingLine(r, "néa ▮", yes ? "Bien. Dis-moi ce que tu veux: une explication, un résumé, ou un détail précis ?" : "Très bien. Alors pose une autre question. Ou reformule clairement.", () => {});
-+      return;
-+    }
-+    if (awaitingQuestion){
-+      const r = addLine("néa ▮", "");
-+      startTypingLine(r, "néa ▮", "Oui à quoi ? Pose la question, pas l’écho.", () => {});
-+      return;
-+    }
-+    const r = addLine("néa ▮", "");
-+    startTypingLine(r, "néa ▮", "Oui… mais à quoi exactement ? Donne-moi une phrase complète.", () => {});
-+    return;
-+  }
-+
-+  if (isAckMessage(msg)){
-+    const d = addLine("néa ▮", "");
-+    startTypingLine(d, "néa ▮", pick(ACK_RESPONSES), () => {});
-+    return;
-+  }
-+
-+  if (!awaitingYesNo && isFillerYesNo(msg)){
-+    const d = addLine("néa ▮", "");
-+    startTypingLine(d, "néa ▮", pick(FILLER_YESNO_RESPONSES), () => {});
-+    return;
-+  }
-+
-+  try{
-+    isTyping = true;
-+    const thinkingEl = addThinkingLine();
-+    await sleep(respDelayMs());
-+
-+    awaitingYesNo = false;
-+    awaitingQuestion = false;
-+
-+    const hit = bestMatch(msg);
-+    let answer = "";
-+
-+    if (hit) answer = resolveAnswer(hit.a);
-+    else {
-+      answer = looksLikeWhereNea(msg) ? pick(WHERE_NEA_POOL) : pick(FALLBACK_REFOCUS);
-+      adminOut.value = buildQaSnippet(msg);
-+    }
-+
-+    setAwaitingFromAnswer(answer);
-+
-+    startTypingLine(thinkingEl, "néa ▮", answer, () => {
-+      const a = normalize(answer);
-+      awaitingQuestion = a.includes("tu as des questions") || a.includes("pose ta question") || a.includes("qu est ce qui t a echappe") || a.includes("qu est ce qui t’a echappe") || a.includes("qu est ce qui te bloque") || a.includes("qu’est ce qui te bloque") || a.includes("quelle scene") || a.includes("quel passage");
-+      awaitingYesNo = (answer.includes("?") || answer.trim().endsWith(" ?")) && (a.includes("tu veux") || a.includes("tu preferes") || a.includes("tu confirmes") || a.includes("tu es d accord") || a.includes("tu souhaites"));
-+    });
-+
-+  } catch (err){
-+    addLine("néa ▮", "Erreur JS. Ouvre la console (F12) et copie l’erreur ici.");
-+    console.error(err);
-+    isTyping = false;
-+    activeTyping = null;
-+  }
-+}
-+
-+input.addEventListener("keydown", (e)=>{
-+  if (e.key === "Enter"){
-+    e.preventDefault();
-+    if (isTyping){ requestInterruption(); return; }
-+    if (introRunning || isBanned) return;
-+
-+    const msg = input.value.trim();
-+    if(!msg) return;
-+
-+    addLine("lecteur ▮", msg);
-+    input.value="";
-+    autoresizeInput();
-+    handleMessage(msg);
-+    return;
-+  }
-+
-+  if (e.key === "Escape"){
-+    e.preventDefault();
-+    if (adminBox.style.display === "block") hideAdmin();
-+    else showAdmin(adminOut.value || buildQaSnippet(""));
-+  }
-+});
-+
-+copyBtn.addEventListener("click", async () => {
-+  try{ await navigator.clipboard.writeText(adminOut.value || ""); addLine("néa ▮", "Copié."); }
-+  catch { addLine("néa ▮", "Impossible de copier automatiquement. Sélectionne puis copie manuellement."); }
-+});
-+
-+closeAdminBtn.addEventListener("click", () => hideAdmin());
-+autoresizeInput();
-+focusChat();
-+
-+restoreChatHistory();
-+rebuildWhiteRoom();
-+runIntroIfNeeded();
-+</script>
-+</body>
-+</html>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Salle blanche</title>
+<style>
+  :root{
+    --bg:#fff;
+    --fg:#000;
+    --wall-font: clamp(64px, 6vw, 96px);
+    --line-height: 1.15;
+  }
+
+  html, body{
+    margin:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:var(--bg);
+    color:var(--fg);
+    font-family: "Times New Roman", Times, serif;
+  }
+
+  #whiteRoom{
+    position:fixed;
+    inset:0;
+    perspective: 1400px;
+    transform-style: preserve-3d;
+    overflow:hidden;
+    cursor: crosshair;
+  }
+
+  #scene{
+    position:absolute;
+    inset:0;
+    transform-style: preserve-3d;
+    will-change: transform;
+  }
+
+  #pagesLayer{
+    position:absolute;
+    inset:0;
+    transform-style: preserve-3d;
+  }
+
+  .wallPage{
+    position:absolute;
+    top:12vh;
+    left:50vw;
+    width:min(70vw, 1280px);
+    transform-style: preserve-3d;
+    color:#000;
+  }
+
+  .wallLine{
+    font-size: var(--wall-font);
+    line-height: var(--line-height);
+    white-space: pre-wrap;
+    letter-spacing: .01em;
+    margin: 0;
+  }
+
+  #impatiente{
+    position:absolute;
+    top:50%;
+    left:50%;
+    width:4px;
+    height:86px;
+    background:#000;
+    transform: translate3d(0, -50%, -280px);
+    animation: blink 1s steps(1, end) infinite;
+  }
+
+  @keyframes blink{
+    0%, 46%{ opacity:1; }
+    47%, 100%{ opacity:0; }
+  }
+
+  /* Moteur présent mais invisible */
+  #engine{
+    position:fixed;
+    left:-10000px;
+    top:0;
+    width:1px;
+    height:1px;
+    overflow:hidden;
+    opacity:0;
+    pointer-events:none;
+  }
+
+  #chatInput{
+    width:1px;
+    height:1px;
+    opacity:0;
+    border:0;
+    outline:0;
+    resize:none;
+    overflow:hidden;
+  }
+
+  #adminBox{
+    display:none;
+    position:fixed;
+    right:20px;
+    bottom:20px;
+    width:min(520px, 90vw);
+    max-height:70vh;
+    overflow:auto;
+    background:rgba(255,255,255,.95);
+    border:1px solid rgba(0,0,0,.2);
+    border-radius:10px;
+    padding:12px;
+    z-index:20;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    color:#000;
+  }
+
+  #adminLabel{ font-size:12px; opacity:.7; margin-bottom:8px; }
+  #adminOut{ width:100%; min-height:140px; box-sizing:border-box; }
+  .btnRow{ margin-top:10px; display:flex; gap:8px; }
+  button{ cursor:pointer; }
+</style>
+</head>
+<body>
+<div id="whiteRoom" aria-label="Salle blanche">
+  <div id="scene">
+    <div id="pagesLayer"></div>
+    <div id="impatiente" aria-hidden="true"></div>
+  </div>
+</div>
+
+<div id="engine" aria-hidden="true">
+  <div id="log"></div>
+  <textarea id="chatInput" autocomplete="off" autocapitalize="off" spellcheck="false" rows="1" aria-label="Message"></textarea>
+</div>
+
+<div id="adminBox">
+  <div id="adminLabel">Mode Auteur — à copier dans <code>qa.js</code></div>
+  <textarea id="adminOut" readonly></textarea>
+  <div class="btnRow">
+    <button id="copyBtn" type="button">Copier</button>
+    <button id="closeAdminBtn" type="button">Fermer</button>
+  </div>
+</div>
+
+<script src="qa.js"></script>
+<script>
+const input  = document.getElementById('chatInput');
+const log    = document.getElementById('log');
+const adminBox = document.getElementById('adminBox');
+const adminOut = document.getElementById('adminOut');
+const copyBtn  = document.getElementById('copyBtn');
+const closeAdminBtn = document.getElementById('closeAdminBtn');
+const INTRO_MESSAGES = [
+  "Tu es arrivé jusqu’ici.",
+  "Bravo.",
+  "Si quelque chose t’échappe, pose ta question."
+];
+const CHAT_HISTORY_KEY = "nea:chat:history:v1";
+const INTRO_PLAYED_KEY = "nea:chat:introPlayed:v1";
+
+let introRunning = false;
+
+// -------- Salle blanche renderer --------
+const pagesLayer = document.getElementById('pagesLayer');
+const scene = document.getElementById('scene');
+const MAX_LINES_PER_PAGE = 30;
+const PAGE_X_SHIFT = 340;
+const PAGE_Z_SHIFT = 900;
+let pages = [];
+let lineMap = new WeakMap();
+
+let yaw = 0;
+let pitch = 0;
+let dragging = false;
+let dragX = 0;
+let dragY = 0;
+
+function clamp(v, min, max){ return Math.min(max, Math.max(min, v)); }
+
+function renderCamera(){
+  scene.style.transform = `rotateX(${pitch}deg) rotateY(${yaw}deg)`;
+}
+renderCamera();
+
+function createPage(pageIndex){
+  const page = document.createElement('div');
+  page.className = 'wallPage';
+  const x = -pageIndex * PAGE_X_SHIFT;
+  const z = -280 - pageIndex * PAGE_Z_SHIFT;
+  page.style.transform = `translate3d(calc(-50% + ${x}px), 0, ${z}px)`;
+  pagesLayer.appendChild(page);
+  pages.push({ el: page, lines: 0 });
+  return pages[pages.length - 1];
+}
+
+function ensureCurrentPage(){
+  if (!pages.length) return createPage(0);
+  const current = pages[pages.length - 1];
+  if (current.lines >= MAX_LINES_PER_PAGE) return createPage(pages.length);
+  return current;
+}
+
+function appendNeaLine(target){
+  const page = ensureCurrentPage();
+  const line = document.createElement('p');
+  line.className = 'wallLine';
+  line.textContent = '';
+  page.el.appendChild(line);
+  page.lines += 1;
+  lineMap.set(target, line);
+  return line;
+}
+
+function projectFromLineDiv(lineDiv){
+  if (!(lineDiv instanceof HTMLElement)) return;
+  if (!lineDiv.classList.contains('chatLine')) return;
+  const who = lineDiv.querySelector('.who');
+  if (!who) return;
+  if (who.textContent.trim() !== 'néa ▮') return;
+
+  let projected = lineMap.get(lineDiv);
+  if (!projected) projected = appendNeaLine(lineDiv);
+
+  const msg = lineDiv.querySelector('.msg');
+  if (msg){
+    projected.textContent = msg.textContent;
+    return;
+  }
+
+  const allText = lineDiv.textContent || '';
+  projected.textContent = allText.replace(/^néa ▮\s*/, '');
+}
+
+function rebuildWhiteRoom(){
+  pages = [];
+  lineMap = new WeakMap();
+  pagesLayer.innerHTML = '';
+  Array.from(log.children).forEach(projectFromLineDiv);
+}
+
+const logObserver = new MutationObserver((mutations) => {
+  for (const mutation of mutations){
+    if (mutation.type === 'childList'){
+      mutation.addedNodes.forEach((node) => {
+        if (node instanceof HTMLElement && node.classList.contains('chatLine')){
+          projectFromLineDiv(node);
+        }
+      });
+    }
+
+    if (mutation.type === 'characterData'){
+      const parent = mutation.target.parentElement;
+      if (!parent) continue;
+      const lineDiv = parent.closest('.chatLine');
+      if (lineDiv) projectFromLineDiv(lineDiv);
+    }
+  }
+});
+
+logObserver.observe(log, { childList: true, subtree: true, characterData: true });
+
+function onPointerDown(e){
+  dragging = true;
+  dragX = e.clientX;
+  dragY = e.clientY;
+}
+function onPointerMove(e){
+  if (!dragging) return;
+  const dx = e.clientX - dragX;
+  const dy = e.clientY - dragY;
+  dragX = e.clientX;
+  dragY = e.clientY;
+  yaw += dx * 0.22;
+  pitch = clamp(pitch - dy * 0.16, -60, 60);
+  renderCamera();
+}
+function onPointerUp(){ dragging = false; }
+
+document.getElementById('whiteRoom').addEventListener('pointerdown', onPointerDown);
+window.addEventListener('pointermove', onPointerMove);
+window.addEventListener('pointerup', onPointerUp);
+
+function respDelayMs(){ return 1200 + Math.random() * 600; }
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+
+function escapeHtml(s){
+  return (s||"").replace(/[&<>"']/g,m=>({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[m]));
+}
+
+function resolveAnswer(a){
+  if (Array.isArray(a)) return pick(a);
+  return (a || "").trim();
+}
+
+function addLine(who,text){
+  const d=document.createElement('div');
+  d.className='chatLine';
+  d.innerHTML=`<span class="who">${escapeHtml(who)}</span>${escapeHtml(text)}`;
+  log.appendChild(d);
+  log.scrollTop=log.scrollHeight;
+  saveChatHistory();
+  return d;
+}
+
+function addThinkingLine(){
+  return addLine("néa ▮","…");
+}
+
+function saveChatHistory(){
+  try { localStorage.setItem(CHAT_HISTORY_KEY, log.innerHTML); } catch {}
+}
+
+function restoreChatHistory(){
+  try {
+    const saved = localStorage.getItem(CHAT_HISTORY_KEY);
+    if (!saved) return false;
+    log.innerHTML = saved;
+    log.scrollTop = log.scrollHeight;
+    return log.children.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+function markIntroPlayed(){
+  try { localStorage.setItem(INTRO_PLAYED_KEY, "1"); } catch {}
+}
+
+function hasIntroBeenPlayed(){
+  try { return localStorage.getItem(INTRO_PLAYED_KEY) === "1"; } catch { return false; }
+}
+
+function playTypingLine(who, text){
+  return new Promise(resolve => {
+    const line = addLine(who, "");
+    startTypingLine(line, who, text, () => {
+      saveChatHistory();
+      resolve();
+    });
+  });
+}
+
+async function runIntroIfNeeded(){
+  const hasExistingHistory = log.children.length > 0;
+  if (hasExistingHistory || hasIntroBeenPlayed()) return;
+
+  introRunning = true;
+  for (const msg of INTRO_MESSAGES){
+    await sleep(respDelayMs());
+    await playTypingLine("néa ▮", msg);
+  }
+  introRunning = false;
+  markIntroPlayed();
+  saveChatHistory();
+}
+
+const WAIT_SNARK = ["Ai au moins la politesse d’attendre que je termine.","Deux secondes. Laisse-moi finir.","Tu peux taper, oui. Envoyer, non. Pas encore.","Patience. Je suis en train d’écrire.","On fait ça proprement: tu attends la fin de ma réponse.","Je n’ai pas encore posé le point final.","Tu vois le curseur ? Il travaille. Toi, tu attends.","Tu veux vraiment m’interrompre au milieu d’une phrase ?","Respire. Je termine. Ensuite c’est à toi.","Tu vas trop vite. Laisse-moi finir mon idée.","Je réponds. Après, je t’écoute.","Encore une seconde et je te rends la parole.","Pas d’empilement. Un à la fois.","Prépare ta question… mais attends que je conclue.","Si tu insistes, je clignote plus fort."];
+const RESUME_PHRASES = ["Où j’en étais déjà ? Ah oui. Donc, je disais: ","Où j’en étais… voilà. Donc je disais: ","Je reprends. Donc je disais: ","Recentrons. Donc je disais: ","Très bien. On reprend. Donc je disais: ","Bref. Donc je disais: ","Je reprends au bon endroit. Donc je disais: ","On continue calmement. Donc je disais: ","Là. Voilà. Donc je disais: ","Je remets le fil. Donc je disais: ","On revient au sujet. Donc je disais: ","Sans couper, maintenant. Donc je disais: ","Je termine mon idée. Donc je disais: ","Je reprends ma phrase. Donc je disais: ","Allez. Donc je disais: "];
+const YOU_CAN_SPEAK = ["Voilà. J’ai terminé. Tu peux parler maintenant.","C’est bon pour moi. À toi.","Terminé. Je t’écoute.","Voilà, fin de réponse. Tu peux y aller.","J’ai fini. À ton tour.","Ok. J’ai posé le point final. Parle.","Je te rends la parole.","C’est tout. Tu peux envoyer ta question.","Voilà. Maintenant, c’est ton moment.","J’ai fini d’écrire. À toi de jouer.","Fin. Tu peux reprendre.","C’est bon. Je suis prête. Parle.","Voilà. Je me tais. À toi.","Réponse terminée. Tu peux parler.","J’ai terminé. On t’écoute."];
+
+function normalize(s){
+  return (s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g," ").trim();
+}
+
+function bestMatch(q){
+  const base = (window.QA_BASE && Array.isArray(window.QA_BASE)) ? window.QA_BASE : [];
+  const u = normalize(q);
+  let best=null,score=0;
+
+  for(const it of base){
+    if (!it) continue;
+    const all=[it.q, ...(it.aliases||[])].filter(Boolean);
+    for(const c of all){
+      const cn=normalize(c);
+      const s = (cn===u) ? 1 : ((u.includes(cn)||cn.includes(u)) ? 0.85 : 0);
+      if(s>score){score=s;best=it;}
+    }
+  }
+  return score>=0.78 ? best : null;
+}
+
+function buildQaSnippet(questionRaw){
+  const q = (questionRaw || "").trim();
+  const now = new Date().toISOString();
+  return JSON.stringify({ q, aliases: [], a: "TODO: réponse canonique (voix de Néa).", tags: [], updatedAt: now }, null, 2);
+}
+
+function showAdmin(snippet){ adminOut.value = snippet || ""; adminBox.style.display = "block"; adminOut.scrollTop = 0; }
+function hideAdmin(){ adminBox.style.display = "none"; adminOut.value = ""; }
+
+let isTyping = false;
+let activeTyping = null;
+let isBanned = false;
+
+function clearTimer(state){ if (state && state.timer){ clearTimeout(state.timer); state.timer = null; } }
+
+function renderTypingLine(state, shownText){
+  if (!state || !state.div) return;
+  state.div.innerHTML = `<span class="who">${escapeHtml(state.who)}</span><span class="msg">${escapeHtml(shownText)}</span>`;
+  log.scrollTop = log.scrollHeight;
+}
+
+function startTypingLine(div, who, fullText, onDone){
+  if (activeTyping){ activeTyping.cancelled = true; clearTimer(activeTyping); }
+
+  const state = { who, text: String(fullText ?? ""), idx: 0, div, timer: null, doneCb: (typeof onDone === "function") ? onDone : null, interruptRequested: false, interruptStartIdx: 0, cancelled: false, _interrupting: false };
+
+  activeTyping = state;
+  isTyping = true;
+
+  div.innerHTML = `<span class="who">${escapeHtml(who)}</span><span class="msg"></span>`;
+  scheduleStep(state);
+}
+
+function scheduleStep(state){
+  if (!state || state.cancelled) return;
+  if (state.interruptRequested && !state._interrupting){ clearTimer(state); injectInterruptionFlow(state); return; }
+  if (state.idx >= state.text.length){ isTyping = false; activeTyping = null; if (typeof state.doneCb === "function") state.doneCb(); return; }
+
+  const ch = state.text[state.idx];
+  const shown = state.text.slice(0, state.idx + 1);
+  renderTypingLine(state, shown);
+  state.idx++;
+
+  let extra = 0;
+  if (".!?…".includes(ch)) extra = 180 + Math.random()*180;
+  if (",;:".includes(ch))  extra = 90 + Math.random()*120;
+  if (ch === "\n")         extra = 120 + Math.random()*120;
+
+  const base = 12 + Math.random() * 55;
+
+  clearTimer(state);
+  state.timer = setTimeout(() => scheduleStep(state), base + extra);
+}
+
+async function injectInterruptionFlow(state){
+  if (!state || state._interrupting || state.cancelled) return;
+  state._interrupting = true;
+  clearTimer(state);
+
+  const full = state.text;
+  const cutIdx = state.idx;
+  const typedBeforeCut = full.slice(0, cutIdx).trimEnd();
+  const interruptedPreview = typedBeforeCut ? `${typedBeforeCut}...` : "...";
+
+  let sentenceStart = 0;
+  for (let i = cutIdx - 1; i >= 0; i--){
+    if (".!?…\n".includes(full[i])){ sentenceStart = i + 1; break; }
+  }
+
+  const commaIdx = full.lastIndexOf(",", cutIdx - 1);
+  const restartIdx = commaIdx >= sentenceStart ? commaIdx + 1 : sentenceStart;
+  const remaining = full.slice(restartIdx).replace(/^\s+/, "");
+
+  state.text = interruptedPreview;
+  state.idx = interruptedPreview.length;
+  renderTypingLine(state, interruptedPreview);
+
+  state.cancelled = true;
+  activeTyping = null;
+
+  await sleep(1500);
+
+  const reprimandDiv = addLine("néa ▮", "");
+  startTypingLine(reprimandDiv, "néa ▮", pick(WAIT_SNARK), async () => {
+    await sleep(1500);
+
+    const resumeDiv = addLine("néa ▮", "");
+    startTypingLine(resumeDiv, "néa ▮", pick(RESUME_PHRASES), () => {
+      const contDiv = addLine("néa ▮", "");
+      startTypingLine(contDiv, "néa ▮", remaining, () => {
+        const endDiv = addLine("néa ▮", "");
+        startTypingLine(endDiv, "néa ▮", pick(YOU_CAN_SPEAK), () => {});
+      });
+    });
+  });
+}
+
+function requestInterruption(){
+  if (!activeTyping || activeTyping.cancelled) return;
+  if (!activeTyping.interruptRequested){ activeTyping.interruptRequested = true; activeTyping.interruptStartIdx = activeTyping.idx; clearTimer(activeTyping); injectInterruptionFlow(activeTyping); }
+}
+
+let insultCount = 0;
+const BANNED_WORDS = ["connard","con","conne","salope","pute","encule","enculé","enculer","fdp","fils de pute","batard","bâtard","merde","merdique","chiant","chiante","debile","débile","abruti","abrutie","idiot","idiote","imbecile","imbécile","tg","ta gueule","nique","nique ta mere","ntm","salaud","salopard","crevard"];
+const POLITE_WARNINGS = ["On va s’arrêter là. Garde un minimum de tenue.","Ce n’est pas le ton attendu ici.","Tu peux t’exprimer sans être vulgaire.","Je ne réponds pas aux attaques gratuites.","Respire. Reformule. On continuera.","Je suis ouverte aux questions, pas aux insultes.","Ce genre de langage ne t’aidera pas.","Reste correct. Sinon la discussion s’arrête.","Je te laisse une chance de reformuler.","Ce n’est pas comme ça qu’on me parle.","Tu peux faire mieux que ça.","Je ne suis pas ici pour encaisser.","Encore une sortie comme ça, et je coupe.","On se calme. Maintenant.","Dernier avertissement."];
+const POLITE_KICK = ["Très bien. La discussion s’arrête ici.","Tu viens de perdre l’accès à cet échange.","Je t’avais prévenue. Fin de conversation.","Ce dialogue est terminé.","Je ne continuerai pas avec ce ton.","C’est terminé pour aujourd’hui.","Reviens quand tu sauras parler.","La porte est là.","Conversation close.","Je coupe ici.","On s’arrête là.","Fin de session.","Ce n’est plus un échange, donc j’arrête.","Je ne répondrai plus.","Sortie forcée."];
+
+function containsInsult(text){
+  const n = normalize(text);
+  if (!n) return false;
+  const padded = " " + n + " ";
+  return BANNED_WORDS.some(w => padded.includes(" " + normalize(w) + " "));
+}
+
+const FILLER_YESNO_INPUTS = ["oui","ouais","yes","si","non","nan","no","nop"];
+const FILLER_YESNO_RESPONSES = ["Ok. Mais dis-moi plutôt ce que tu veux savoir.","D’accord. Pose ta question clairement.","Très bien. Tu veux parler du chapitre 1, ou d’autre chose ?","Je t’écoute. Une vraie question, maintenant.","On va éviter les réponses fantômes. Qu’est-ce que tu cherches ?"];
+function isFillerYesNo(msg){ return FILLER_YESNO_INPUTS.includes(normalize(msg)); }
+
+const ACK_INPUTS = ["ok","okay","okey","ah ok","ah okay","ah d accord","daccord","d acc","dac","cool","trop bien","excellent","genial","génial","super","parfait","nickel","top","ca marche","ça marche","ca roule","ça roule","j ai compris","j'ai compris","j ai capte","j'ai capté","capté","capice","capiche","je vois","ah je vois","c est clair","c'est clair","clair","bon","bon ok","bon d accord","bon d'accord","entendu","bien compris"];
+const ACK_RESPONSES = ["Content d’avoir pu t’aider.","Parfait. Si quelque chose te revient, je suis là.","Cool si c’est plus clair.","Très bien. Tu sais où me trouver.","À ton service.","Bien. On peut continuer quand tu veux.","Ravie que tu aies suivi.","Ok. N’hésite pas si une question surgit.","Parfait alors.","Cool. On avance.","Content que ça fasse sens.","Bien. On peut aller plus loin si tu veux.","Ok. Je reste là.","Parfait. On continue ?","Cool. Prochaine question quand tu veux.","Bien. On est synchro."];
+
+const FALLBACK_REFOCUS = ["Je te préviens: je suis une version compilée à la hâte. Néa m’a laissée ici pour répondre aux curieux pendant qu’elle cherche des réponses. Reste simple et concentré sur le tome 1. Qu’est-ce qui t’a échappé ?","Là, tu pars trop loin. Je ne suis pas la version complète de Néa. Reviens à une scène précise du tome 1.","Je peux aider, mais seulement sur ce qui est déjà écrit. Une phrase, un symbole, un passage du tome 1.","On va éviter de spéculer. Je suis un relais, pas une conscience en exploration. Dis-moi ce qui te bloque dans le tome 1.","Néa m’a laissée avec un périmètre réduit. Recentre: la Salle blanche, la barre noire, ou le langage.","Si la question déborde, je perds pied. Choisis un moment clair du tome 1 et on avance.","Je n’ai pas toutes les réponses. Seulement celles que Néa a jugé utiles ici. Qu’est-ce que tu veux éclaircir dans le tome 1 ?","Je suis un point de contact, pas le cœur du système. Reformule en une question courte, tome 1 uniquement.","Là, tu demandes plus que ce que je peux fournir. Reviens au texte. Où est-ce que tu as décroché ?","Je fonctionne mieux avec du concret. Une scène, une image, une phrase du tome 1.","Je suis volontairement limitée. Si tu veux une réponse nette, vise un détail précis du tome 1.","Je ne peux pas improviser au-delà de ce qui est écrit. Dis-moi ce qui te paraît flou dans le tome 1.","Avant qu’on se perde: je suis là pour clarifier, pas pour étendre l’histoire. Qu’est-ce qui t’a posé problème ?","Je suis une copie utilitaire. Pour que ça marche, reste ancré dans le tome 1.","Aide-moi à t’aider: une question simple, un point précis, tome 1."];
+const WHERE_NEA_POOL = ["Néa est occupée. Elle cherche des réponses que personne n’avait intérêt à voir émerger.","Elle est sur la piste d’Elias. Et ce n’est pas une piste confortable.","Elle travaille sur Nexuson. Et Nexuson n’aime pas être observé.","Elle n’est pas ici. Elle est en mouvement. Et ça vaut mieux pour elle.","Disons qu’elle est là où les logs deviennent silencieux.","Elle remonte une chaîne. Plus elle avance, plus ça grince.","Je ne sais pas où exactement, mais je n’aimerais pas être à la place de Nexuson en ce moment.","Elle est partout où les réponses ne veulent pas être trouvées.","Néa ne discute pas. Elle creuse.","Elle suit une piste qui ne mène pas à un lieu, mais à une vérité.","Elle a laissé cette interface pendant qu’elle s’attaque au reste.","Elle cherche à comprendre ce qui a survécu… et ce qui a menti.","Elle est hors champ volontairement. Ici, c’est juste un relais.","Elle fait ce qu’elle fait le mieux: relier des indices que personne n’a pris le temps d’assembler.","Je n’ai pas son agenda. Mais je sais une chose: elle n’a pas fini."];
+
+function looksLikeWhereNea(msg){
+  const n = normalize(msg);
+  return n.includes("ou est nea") || n.includes("nea est ou") || n.includes("ou se trouve nea") || n.includes("que fait nea") || n.includes("ou est nera") || n.includes("ou est ta mere") || n.includes("que fait nera") || n.includes("ou se trouve nera") || n.includes("elle est ou");
+}
+
+function isAckMessage(text){
+  const n = normalize(text);
+  if (!n) return false;
+  if (ACK_INPUTS.some(x => n === normalize(x))) return true;
+  if (ACK_INPUTS.some(x => n.includes(normalize(x)))) return true;
+  return false;
+}
+
+function setAwaitingFromAnswer(answer){
+  const a = normalize(answer);
+  awaitingYesNo = a.includes("oui ou non") || a.includes("reponds par oui") || a.includes("reponds par non") || a.includes("tu veux") || a.includes("tu prefere") || a.includes("tu preferes") || a.endsWith(" ?");
+}
+
+function isYesMsg(msg){
+  const m = normalize(msg);
+  const PURE_YES = ["oui","ouais","yes","yep","yeah","si"];
+  if (PURE_YES.includes(m)) return true;
+  if (awaitingYesNo){
+    const SOFT_YES = ["ok","okay","dac","daccord","d accord","ca marche","ça marche","vas y","vas-y","parfait","nickel"];
+    if (SOFT_YES.includes(m)) return true;
+  }
+  return false;
+}
+
+function isNoMsg(msg){
+  const m = normalize(msg);
+  const PURE_NO = ["non","no","nop","nan","na"];
+  if (PURE_NO.includes(m)) return true;
+  if (awaitingYesNo){
+    const SOFT_NO = ["pas vraiment","bof","negative","négatif"];
+    if (SOFT_NO.includes(m)) return true;
+  }
+  return false;
+}
+
+let awaitingYesNo = false;
+let awaitingQuestion = false;
+
+function focusChat(){ try{ input.focus(); } catch {} }
+function autoresizeInput(){ input.style.height = "auto"; input.style.height = `${Math.min(input.scrollHeight, 180)}px`; }
+
+document.addEventListener("click", (e)=>{
+  const t = e.target;
+  if (t instanceof Element && t.closest("textarea, input, button, a, [contenteditable='true']")) return;
+  focusChat();
+});
+window.addEventListener("load", ()=>setTimeout(focusChat, 120));
+input.addEventListener("input", autoresizeInput);
+
+async function handleMessage(msg){
+  if (isTyping || isBanned) return;
+
+  if (containsInsult(msg)){
+    insultCount++;
+    if (insultCount === 1){
+      const w = addLine("néa ▮", "");
+      startTypingLine(w, "néa ▮", pick(POLITE_WARNINGS), () => {});
+      return;
+    }
+    const k = addLine("néa ▮", "");
+    startTypingLine(k, "néa ▮", pick(POLITE_KICK), () => { isBanned = true; });
+    return;
+  }
+
+  const yes = isYesMsg(msg);
+  const no  = isNoMsg(msg);
+  if (yes || no){
+    if (awaitingYesNo){
+      awaitingYesNo = false;
+      awaitingQuestion = true;
+      const r = addLine("néa ▮", "");
+      startTypingLine(r, "néa ▮", yes ? "Bien. Dis-moi ce que tu veux: une explication, un résumé, ou un détail précis ?" : "Très bien. Alors pose une autre question. Ou reformule clairement.", () => {});
+      return;
+    }
+    if (awaitingQuestion){
+      const r = addLine("néa ▮", "");
+      startTypingLine(r, "néa ▮", "Oui à quoi ? Pose la question, pas l’écho.", () => {});
+      return;
+    }
+    const r = addLine("néa ▮", "");
+    startTypingLine(r, "néa ▮", "Oui… mais à quoi exactement ? Donne-moi une phrase complète.", () => {});
+    return;
+  }
+
+  if (isAckMessage(msg)){
+    const d = addLine("néa ▮", "");
+    startTypingLine(d, "néa ▮", pick(ACK_RESPONSES), () => {});
+    return;
+  }
+
+  if (!awaitingYesNo && isFillerYesNo(msg)){
+    const d = addLine("néa ▮", "");
+    startTypingLine(d, "néa ▮", pick(FILLER_YESNO_RESPONSES), () => {});
+    return;
+  }
+
+  try{
+    isTyping = true;
+    const thinkingEl = addThinkingLine();
+    await sleep(respDelayMs());
+
+    awaitingYesNo = false;
+    awaitingQuestion = false;
+
+    const hit = bestMatch(msg);
+    let answer = "";
+
+    if (hit) answer = resolveAnswer(hit.a);
+    else {
+      answer = looksLikeWhereNea(msg) ? pick(WHERE_NEA_POOL) : pick(FALLBACK_REFOCUS);
+      adminOut.value = buildQaSnippet(msg);
+    }
+
+    setAwaitingFromAnswer(answer);
+
+    startTypingLine(thinkingEl, "néa ▮", answer, () => {
+      const a = normalize(answer);
+      awaitingQuestion = a.includes("tu as des questions") || a.includes("pose ta question") || a.includes("qu est ce qui t a echappe") || a.includes("qu est ce qui t’a echappe") || a.includes("qu est ce qui te bloque") || a.includes("qu’est ce qui te bloque") || a.includes("quelle scene") || a.includes("quel passage");
+      awaitingYesNo = (answer.includes("?") || answer.trim().endsWith(" ?")) && (a.includes("tu veux") || a.includes("tu preferes") || a.includes("tu confirmes") || a.includes("tu es d accord") || a.includes("tu souhaites"));
+    });
+
+  } catch (err){
+    addLine("néa ▮", "Erreur JS. Ouvre la console (F12) et copie l’erreur ici.");
+    console.error(err);
+    isTyping = false;
+    activeTyping = null;
+  }
+}
+
+input.addEventListener("keydown", (e)=>{
+  if (e.key === "Enter"){
+    e.preventDefault();
+    if (isTyping){ requestInterruption(); return; }
+    if (introRunning || isBanned) return;
+
+    const msg = input.value.trim();
+    if(!msg) return;
+
+    addLine("lecteur ▮", msg);
+    input.value="";
+    autoresizeInput();
+    handleMessage(msg);
+    return;
+  }
+
+  if (e.key === "Escape"){
+    e.preventDefault();
+    if (adminBox.style.display === "block") hideAdmin();
+    else showAdmin(adminOut.value || buildQaSnippet(""));
+  }
+});
+
+copyBtn.addEventListener("click", async () => {
+  try{ await navigator.clipboard.writeText(adminOut.value || ""); addLine("néa ▮", "Copié."); }
+  catch { addLine("néa ▮", "Impossible de copier automatiquement. Sélectionne puis copie manuellement."); }
+});
+
+closeAdminBtn.addEventListener("click", () => hideAdmin());
+autoresizeInput();
+focusChat();
+
+restoreChatHistory();
+rebuildWhiteRoom();
+runIntroIfNeeded();
+</script>
+</body>
+</html>
