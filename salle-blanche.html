@@ -25,7 +25,7 @@
   #whiteRoom{
     position:fixed;
     inset:0;
-    perspective: 1400px;
+    perspective: 2400px;
     transform-style: preserve-3d;
     overflow:hidden;
     cursor: crosshair;
@@ -68,7 +68,7 @@
     width:4px;
     height:86px;
     background:#000;
-    transform: translate3d(0, -50%, -280px);
+    transform: translate3d(0, -50%, -2200px);
     animation: blink 1s steps(1, end) infinite;
   }
 
@@ -159,6 +159,7 @@ const INTRO_MESSAGES = [
 ];
 const CHAT_HISTORY_KEY = "nea:chat:history:v1";
 const INTRO_PLAYED_KEY = "nea:chat:introPlayed:v1";
+const PERSIST_ENABLED = new URLSearchParams(window.location.search).get("persist") === "1";
 
 let introRunning = false;
 
@@ -166,8 +167,11 @@ let introRunning = false;
 const pagesLayer = document.getElementById('pagesLayer');
 const scene = document.getElementById('scene');
 const MAX_LINES_PER_PAGE = 30;
-const PAGE_X_SHIFT = 340;
-const PAGE_Z_SHIFT = 900;
+const PAGES_PER_AISLE = 10;
+const BASE_OFFSET_X = 900;
+const AISLE_SPACING_X = 800;
+const BASE_Z = 1600;
+const PAGE_DEPTH = 1400;
 let pages = [];
 let lineMap = new WeakMap();
 
@@ -187,8 +191,10 @@ renderCamera();
 function createPage(pageIndex){
   const page = document.createElement('div');
   page.className = 'wallPage';
-  const x = -pageIndex * PAGE_X_SHIFT;
-  const z = -280 - pageIndex * PAGE_Z_SHIFT;
+  const aisleIndex = Math.floor(pageIndex / PAGES_PER_AISLE);
+  const slot = pageIndex % PAGES_PER_AISLE;
+  const x = -(BASE_OFFSET_X + aisleIndex * AISLE_SPACING_X);
+  const z = -(BASE_Z + slot * PAGE_DEPTH);
   page.style.transform = `translate3d(calc(-50% + ${x}px), 0, ${z}px)`;
   pagesLayer.appendChild(page);
   pages.push({ el: page, lines: 0 });
@@ -224,13 +230,8 @@ function projectFromLineDiv(lineDiv){
   if (!projected) projected = appendNeaLine(lineDiv);
 
   const msg = lineDiv.querySelector('.msg');
-  if (msg){
-    projected.textContent = msg.textContent;
-    return;
-  }
-
-  const allText = lineDiv.textContent || '';
-  projected.textContent = allText.replace(/^néa ▮\s*/, '');
+  if (!msg) return;
+  projected.textContent = msg.textContent;
 }
 
 function rebuildWhiteRoom(){
@@ -300,7 +301,7 @@ function resolveAnswer(a){
 function addLine(who,text){
   const d=document.createElement('div');
   d.className='chatLine';
-  d.innerHTML=`<span class="who">${escapeHtml(who)}</span>${escapeHtml(text)}`;
+  d.innerHTML=`<span class="who">${escapeHtml(who)}</span><span class="msg">${escapeHtml(text)}</span>`;
   log.appendChild(d);
   log.scrollTop=log.scrollHeight;
   saveChatHistory();
@@ -312,10 +313,12 @@ function addThinkingLine(){
 }
 
 function saveChatHistory(){
+  if (!PERSIST_ENABLED) return;
   try { localStorage.setItem(CHAT_HISTORY_KEY, log.innerHTML); } catch {}
 }
 
 function restoreChatHistory(){
+  if (!PERSIST_ENABLED) return false;
   try {
     const saved = localStorage.getItem(CHAT_HISTORY_KEY);
     if (!saved) return false;
@@ -328,10 +331,12 @@ function restoreChatHistory(){
 }
 
 function markIntroPlayed(){
+  if (!PERSIST_ENABLED) return;
   try { localStorage.setItem(INTRO_PLAYED_KEY, "1"); } catch {}
 }
 
 function hasIntroBeenPlayed(){
+  if (!PERSIST_ENABLED) return false;
   try { return localStorage.getItem(INTRO_PLAYED_KEY) === "1"; } catch { return false; }
 }
 
@@ -402,6 +407,7 @@ function clearTimer(state){ if (state && state.timer){ clearTimeout(state.timer)
 function renderTypingLine(state, shownText){
   if (!state || !state.div) return;
   state.div.innerHTML = `<span class="who">${escapeHtml(state.who)}</span><span class="msg">${escapeHtml(shownText)}</span>`;
+  projectFromLineDiv(state.div);
   log.scrollTop = log.scrollHeight;
 }
 
@@ -674,7 +680,7 @@ closeAdminBtn.addEventListener("click", () => hideAdmin());
 autoresizeInput();
 focusChat();
 
-restoreChatHistory();
+if (PERSIST_ENABLED) restoreChatHistory();
 rebuildWhiteRoom();
 runIntroIfNeeded();
 </script>
