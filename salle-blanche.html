@@ -25,7 +25,7 @@
   #whiteRoom{
     position:fixed;
     inset:0;
-    perspective: 1400px;
+    perspective: 2800px;
     transform-style: preserve-3d;
     overflow:hidden;
     cursor: crosshair;
@@ -44,11 +44,26 @@
     transform-style: preserve-3d;
   }
 
+  #activeLayer{
+    position:absolute;
+    inset:0;
+    transform-style: preserve-3d;
+    pointer-events:none;
+  }
+
+  #activeLine{
+    position:absolute;
+    top:10vh;
+    left:50vw;
+    width:min(66vw, 1240px);
+    transform: translate3d(-50%, 0, -1700px);
+  }
+
   .wallPage{
     position:absolute;
-    top:12vh;
+    top:10vh;
     left:50vw;
-    width:min(70vw, 1280px);
+    width:min(66vw, 1240px);
     transform-style: preserve-3d;
     color:#000;
   }
@@ -68,7 +83,7 @@
     width:4px;
     height:86px;
     background:#000;
-    transform: translate3d(0, -50%, -280px);
+    transform: translate3d(0, -50%, -2200px);
     animation: blink 1s steps(1, end) infinite;
   }
 
@@ -126,6 +141,7 @@
 <div id="whiteRoom" aria-label="Salle blanche">
   <div id="scene">
     <div id="pagesLayer"></div>
+    <div id="activeLayer"><p id="activeLine" class="wallLine"></p></div>
     <div id="impatiente" aria-hidden="true"></div>
   </div>
 </div>
@@ -157,17 +173,17 @@ const INTRO_MESSAGES = [
   "Bravo.",
   "Si quelque chose t’échappe, pose ta question."
 ];
-const CHAT_HISTORY_KEY = "nea:chat:history:v1";
-const INTRO_PLAYED_KEY = "nea:chat:introPlayed:v1";
-
 let introRunning = false;
 
 // -------- Salle blanche renderer --------
 const pagesLayer = document.getElementById('pagesLayer');
+const activeLine = document.getElementById('activeLine');
 const scene = document.getElementById('scene');
-const MAX_LINES_PER_PAGE = 30;
-const PAGE_X_SHIFT = 340;
-const PAGE_Z_SHIFT = 900;
+const MAX_LINES_PER_PAGE = 9;
+const AISLE_X_BASE = -1150;
+const AISLE_X_STEP = -620;
+const PAGE_Z_BASE = -3200;
+const PAGE_Z_SHIFT = 1650;
 let pages = [];
 let lineMap = new WeakMap();
 
@@ -187,8 +203,12 @@ renderCamera();
 function createPage(pageIndex){
   const page = document.createElement('div');
   page.className = 'wallPage';
-  const x = -pageIndex * PAGE_X_SHIFT;
-  const z = -280 - pageIndex * PAGE_Z_SHIFT;
+
+  const aisleIndex = Math.floor(pageIndex / MAX_LINES_PER_PAGE);
+  const laneOffset = pageIndex % MAX_LINES_PER_PAGE;
+  const x = AISLE_X_BASE + aisleIndex * AISLE_X_STEP;
+  const z = PAGE_Z_BASE - laneOffset * PAGE_Z_SHIFT;
+
   page.style.transform = `translate3d(calc(-50% + ${x}px), 0, ${z}px)`;
   pagesLayer.appendChild(page);
   pages.push({ el: page, lines: 0 });
@@ -213,6 +233,15 @@ function appendNeaLine(target){
   return line;
 }
 
+
+function clearActiveLine(){
+  activeLine.textContent = '';
+}
+
+function isActiveTypingLine(lineDiv){
+  return !!(activeTyping && activeTyping.div === lineDiv && isTyping);
+}
+
 function projectFromLineDiv(lineDiv){
   if (!(lineDiv instanceof HTMLElement)) return;
   if (!lineDiv.classList.contains('chatLine')) return;
@@ -220,23 +249,28 @@ function projectFromLineDiv(lineDiv){
   if (!who) return;
   if (who.textContent.trim() !== 'néa ▮') return;
 
-  let projected = lineMap.get(lineDiv);
-  if (!projected) projected = appendNeaLine(lineDiv);
-
   const msg = lineDiv.querySelector('.msg');
-  if (msg){
-    projected.textContent = msg.textContent;
+  const messageText = msg ? msg.textContent : (lineDiv.textContent || '').replace(/^néa ▮\s*/, '');
+
+  if (isActiveTypingLine(lineDiv)){
+    activeLine.textContent = messageText;
     return;
   }
 
-  const allText = lineDiv.textContent || '';
-  projected.textContent = allText.replace(/^néa ▮\s*/, '');
+  if (activeLine.textContent === messageText){
+    clearActiveLine();
+  }
+
+  let projected = lineMap.get(lineDiv);
+  if (!projected) projected = appendNeaLine(lineDiv);
+  projected.textContent = messageText;
 }
 
 function rebuildWhiteRoom(){
   pages = [];
   lineMap = new WeakMap();
   pagesLayer.innerHTML = '';
+  clearActiveLine();
   Array.from(log.children).forEach(projectFromLineDiv);
 }
 
@@ -272,8 +306,8 @@ function onPointerMove(e){
   const dy = e.clientY - dragY;
   dragX = e.clientX;
   dragY = e.clientY;
-  yaw += dx * 0.22;
-  pitch = clamp(pitch - dy * 0.16, -60, 60);
+  yaw += dx * 0.12;
+  pitch = clamp(pitch - dy * 0.09, -36, 36);
   renderCamera();
 }
 function onPointerUp(){ dragging = false; }
@@ -303,7 +337,6 @@ function addLine(who,text){
   d.innerHTML=`<span class="who">${escapeHtml(who)}</span>${escapeHtml(text)}`;
   log.appendChild(d);
   log.scrollTop=log.scrollHeight;
-  saveChatHistory();
   return d;
 }
 
@@ -311,53 +344,20 @@ function addThinkingLine(){
   return addLine("néa ▮","…");
 }
 
-function saveChatHistory(){
-  try { localStorage.setItem(CHAT_HISTORY_KEY, log.innerHTML); } catch {}
-}
 
-function restoreChatHistory(){
-  try {
-    const saved = localStorage.getItem(CHAT_HISTORY_KEY);
-    if (!saved) return false;
-    log.innerHTML = saved;
-    log.scrollTop = log.scrollHeight;
-    return log.children.length > 0;
-  } catch {
-    return false;
-  }
-}
 
-function markIntroPlayed(){
-  try { localStorage.setItem(INTRO_PLAYED_KEY, "1"); } catch {}
-}
 
-function hasIntroBeenPlayed(){
-  try { return localStorage.getItem(INTRO_PLAYED_KEY) === "1"; } catch { return false; }
-}
 
 function playTypingLine(who, text){
   return new Promise(resolve => {
     const line = addLine(who, "");
     startTypingLine(line, who, text, () => {
-      saveChatHistory();
       resolve();
     });
   });
 }
 
-async function runIntroIfNeeded(){
-  const hasExistingHistory = log.children.length > 0;
-  if (hasExistingHistory || hasIntroBeenPlayed()) return;
-
-  introRunning = true;
-  for (const msg of INTRO_MESSAGES){
-    await sleep(respDelayMs());
-    await playTypingLine("néa ▮", msg);
-  }
-  introRunning = false;
-  markIntroPlayed();
-  saveChatHistory();
-}
+async function runIntroIfNeeded(){ return; }
 
 const WAIT_SNARK = ["Ai au moins la politesse d’attendre que je termine.","Deux secondes. Laisse-moi finir.","Tu peux taper, oui. Envoyer, non. Pas encore.","Patience. Je suis en train d’écrire.","On fait ça proprement: tu attends la fin de ma réponse.","Je n’ai pas encore posé le point final.","Tu vois le curseur ? Il travaille. Toi, tu attends.","Tu veux vraiment m’interrompre au milieu d’une phrase ?","Respire. Je termine. Ensuite c’est à toi.","Tu vas trop vite. Laisse-moi finir mon idée.","Je réponds. Après, je t’écoute.","Encore une seconde et je te rends la parole.","Pas d’empilement. Un à la fois.","Prépare ta question… mais attends que je conclue.","Si tu insistes, je clignote plus fort."];
 const RESUME_PHRASES = ["Où j’en étais déjà ? Ah oui. Donc, je disais: ","Où j’en étais… voilà. Donc je disais: ","Je reprends. Donc je disais: ","Recentrons. Donc je disais: ","Très bien. On reprend. Donc je disais: ","Bref. Donc je disais: ","Je reprends au bon endroit. Donc je disais: ","On continue calmement. Donc je disais: ","Là. Voilà. Donc je disais: ","Je remets le fil. Donc je disais: ","On revient au sujet. Donc je disais: ","Sans couper, maintenant. Donc je disais: ","Je termine mon idée. Donc je disais: ","Je reprends ma phrase. Donc je disais: ","Allez. Donc je disais: "];
@@ -674,9 +674,7 @@ closeAdminBtn.addEventListener("click", () => hideAdmin());
 autoresizeInput();
 focusChat();
 
-restoreChatHistory();
 rebuildWhiteRoom();
-runIntroIfNeeded();
 </script>
 </body>
 </html>
