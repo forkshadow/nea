@@ -428,6 +428,12 @@ function startTypingLine(div, who, fullText, onDone){
 function scheduleStep(state){
   if (!state || state.cancelled) return;
 
+  if (state.interruptRequested && !state._interrupting){
+    clearTimer(state);
+    injectInterruptionFlow(state);
+    return;
+  }
+
   if (state.idx >= state.text.length){
     isTyping = false;
     activeTyping = null;
@@ -439,17 +445,6 @@ function scheduleStep(state){
   const shown = state.text.slice(0, state.idx + 1);
   renderTypingLine(state, shown);
   state.idx++;
-
-  if (state.interruptRequested && !state._interrupting){
-    const isGoodStop = ".!?…\n".includes(ch);
-    const tooFar = state.idx >= Math.min(state.text.length, state.interruptStartIdx + 140);
-
-    if (isGoodStop || tooFar){
-      clearTimer(state);
-      injectInterruptionFlow(state);
-      return;
-    }
-  }
 
   let extra = 0;
   if (".!?…".includes(ch)) extra = 180 + Math.random()*180;
@@ -472,7 +467,7 @@ async function injectInterruptionFlow(state){
   const cutIdx = state.idx;
 
   const typedBeforeCut = full.slice(0, cutIdx).trimEnd();
-  const interruptedPreview = `${typedBeforeCut}...`;
+  const interruptedPreview = typedBeforeCut ? `${typedBeforeCut}...` : "...";
 
   let sentenceStart = 0;
   for (let i = cutIdx - 1; i >= 0; i--){
@@ -515,6 +510,8 @@ function requestInterruption(){
   if (!activeTyping.interruptRequested){
     activeTyping.interruptRequested = true;
     activeTyping.interruptStartIdx = activeTyping.idx;
+    clearTimer(activeTyping);
+    injectInterruptionFlow(activeTyping);
   }
 }
 
@@ -742,7 +739,13 @@ function autoresizeInput(){
   input.style.height = "auto";
   input.style.height = `${Math.min(input.scrollHeight, 180)}px`;
 }
-document.addEventListener("click", ()=>focusChat());
+document.addEventListener("click", (e)=>{
+  const t = e.target;
+  if (t instanceof Element && t.closest("textarea, input, button, a, [contenteditable='true']")){
+    return;
+  }
+  focusChat();
+});
 window.addEventListener("load", ()=>setTimeout(focusChat, 120));
 input.addEventListener("input", autoresizeInput);
 
