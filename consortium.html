@@ -913,6 +913,12 @@ copyBtn.addEventListener("click", async () => {
 closeAdminBtn.addEventListener("click", () => hideAdmin());
 autoresizeInput();
 focusChat();
+
+// --- Boot (restaure l'historique, puis lance l'intro si besoin)
+restoreChatHistory();
+runIntroIfNeeded();
+
+  
 </script>
 </body>
 </html>
