@@ -412,8 +412,11 @@
     }
 
     // ----- UX input
-    document.addEventListener('click', () => {
-      if (state !== STATE.LOCKED) input.focus();
+    document.addEventListener('pointerdown', (e) => {
+      if (state === STATE.LOCKED) return;
+      const t = e.target;
+      if (t instanceof Element && t.closest("textarea, input, button, a, [contenteditable='true']")) return;
+      input.focus();
     });
 
     input.addEventListener('input', autoresizeInput);
