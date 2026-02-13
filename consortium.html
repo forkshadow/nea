@@ -469,20 +469,26 @@ async function injectInterruptionFlow(state){
   clearTimer(state);
 
   const full = state.text;
-  let cutIdx = state.idx;
+  const cutIdx = state.idx;
 
-  const lookAhead = full.slice(cutIdx, cutIdx + 160);
-  const m = lookAhead.match(/[.!?…]\s|\n/);
-  if (m && m.index != null){
-    cutIdx = cutIdx + m.index + 1;
+  const typedBeforeCut = full.slice(0, cutIdx).trimEnd();
+  const interruptedPreview = `${typedBeforeCut}...`;
+
+  let sentenceStart = 0;
+  for (let i = cutIdx - 1; i >= 0; i--){
+    if (".!?…\n".includes(full[i])){
+      sentenceStart = i + 1;
+      break;
+    }
   }
 
-  const before = full.slice(0, cutIdx).trimEnd();
-  let remaining = full.slice(cutIdx).replace(/^\s+/, "");
+  const commaIdx = full.lastIndexOf(",", cutIdx - 1);
+  const restartIdx = commaIdx >= sentenceStart ? commaIdx + 1 : sentenceStart;
+  const remaining = full.slice(restartIdx).replace(/^\s+/, "");
 
-  state.text = before;
-  state.idx = before.length;
-  renderTypingLine(state, before);
+  state.text = interruptedPreview;
+  state.idx = interruptedPreview.length;
+  renderTypingLine(state, interruptedPreview);
 
   state.cancelled = true;
   activeTyping = null;
