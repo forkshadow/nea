@@ -8,8 +8,8 @@
   :root{
     --bg:#fff;
     --fg:#000;
-    --wall-font: clamp(64px, 6vw, 96px);
-    --line-height: 1.15;
+    --wall-font: clamp(72px, 6.8vw, 112px);
+    --line-height: 1.08;
   }
 
   html, body{
@@ -38,7 +38,8 @@
     will-change: transform;
   }
 
-  #pagesLayer{
+  #activeLayer,
+  #archiveLayer{
     position:absolute;
     inset:0;
     transform-style: preserve-3d;
@@ -68,7 +69,7 @@
     width:4px;
     height:86px;
     background:#000;
-    transform: translate3d(0, -50%, -2200px);
+    transform: translate3d(0, -620px, -2500px);
     animation: blink 1s steps(1, end) infinite;
   }
 
@@ -125,7 +126,8 @@
 <body>
 <div id="whiteRoom" aria-label="Salle blanche">
   <div id="scene">
-    <div id="pagesLayer"></div>
+    <div id="archiveLayer"></div>
+    <div id="activeLayer"></div>
     <div id="impatiente" aria-hidden="true"></div>
   </div>
 </div>
@@ -159,12 +161,13 @@ const INTRO_MESSAGES = [
 ];
 const CHAT_HISTORY_KEY = "nea:chat:history:v1";
 const INTRO_PLAYED_KEY = "nea:chat:introPlayed:v1";
-const PERSIST_ENABLED = new URLSearchParams(window.location.search).get("persist") === "1";
+const PERSIST_ENABLED = false;
 
 let introRunning = false;
 
 // -------- Salle blanche renderer --------
-const pagesLayer = document.getElementById('pagesLayer');
+const activeLayer = document.getElementById('activeLayer');
+const archiveLayer = document.getElementById('archiveLayer');
 const scene = document.getElementById('scene');
 const MAX_LINES_PER_PAGE = 30;
 const PAGES_PER_AISLE = 10;
@@ -172,7 +175,15 @@ const BASE_OFFSET_X = 900;
 const AISLE_SPACING_X = 800;
 const BASE_Z = 1600;
 const PAGE_DEPTH = 1400;
-let pages = [];
+const CURSOR_Y = -620;
+const CURSOR_Z = -2500;
+const ACTIVE_PAGE_Y = CURSOR_Y + 40;
+const ACTIVE_PAGE_Z = CURSOR_Z - 80;
+const ARCHIVE_Y = CURSOR_Y + 40;
+const impatiente = document.getElementById('impatiente');
+impatiente.style.transform = `translate3d(0, ${CURSOR_Y}px, ${CURSOR_Z}px)`;
+let activePage = null;
+let archivedCount = 0;
 let lineMap = new WeakMap();
 
 let yaw = 0;
@@ -188,34 +199,46 @@ function renderCamera(){
 }
 renderCamera();
 
-function createPage(pageIndex){
+function createActivePage(){
   const page = document.createElement('div');
   page.className = 'wallPage';
-  const aisleIndex = Math.floor(pageIndex / PAGES_PER_AISLE);
-  const slot = pageIndex % PAGES_PER_AISLE;
-  const x = -(BASE_OFFSET_X + aisleIndex * AISLE_SPACING_X);
-  const z = -(BASE_Z + slot * PAGE_DEPTH);
-  page.style.transform = `translate3d(calc(-50% + ${x}px), 0, ${z}px)`;
-  pagesLayer.appendChild(page);
-  pages.push({ el: page, lines: 0 });
-  return pages[pages.length - 1];
+  page.style.transform = `translate3d(calc(-50% + 0px), ${ACTIVE_PAGE_Y}px, ${ACTIVE_PAGE_Z}px)`;
+  activeLayer.appendChild(page);
+  activePage = { el: page, lines: 0 };
+  return activePage;
 }
 
-function ensureCurrentPage(){
-  if (!pages.length) return createPage(0);
-  const current = pages[pages.length - 1];
-  if (current.lines >= MAX_LINES_PER_PAGE) return createPage(pages.length);
-  return current;
+function finalizeActivePage(){
+  if (!activePage || !activePage.el || activePage.lines === 0) return;
+  const page = activePage.el;
+  if (page.parentElement === activeLayer) activeLayer.removeChild(page);
+
+  const aisleIndex = Math.floor(archivedCount / PAGES_PER_AISLE);
+  const slot = archivedCount % PAGES_PER_AISLE;
+  const archiveX = -(BASE_OFFSET_X + aisleIndex * AISLE_SPACING_X);
+  const archiveZ = -(BASE_Z + slot * PAGE_DEPTH);
+  page.style.transform = `translate3d(calc(-50% + ${archiveX}px), ${ARCHIVE_Y}px, ${archiveZ}px)`;
+  archiveLayer.appendChild(page);
+
+  archivedCount += 1;
+  activePage = null;
 }
 
-function appendNeaLine(target){
-  const page = ensureCurrentPage();
+function appendLineToActivePage(target){
+  if (!activePage) createActivePage();
+
   const line = document.createElement('p');
   line.className = 'wallLine';
   line.textContent = '';
-  page.el.appendChild(line);
-  page.lines += 1;
+  activePage.el.appendChild(line);
+  activePage.lines += 1;
   lineMap.set(target, line);
+
+  if (activePage.lines >= MAX_LINES_PER_PAGE){
+    finalizeActivePage();
+    createActivePage();
+  }
+
   return line;
 }
 
@@ -227,7 +250,7 @@ function projectFromLineDiv(lineDiv){
   if (who.textContent.trim() !== 'néa ▮') return;
 
   let projected = lineMap.get(lineDiv);
-  if (!projected) projected = appendNeaLine(lineDiv);
+  if (!projected) projected = appendLineToActivePage(lineDiv);
 
   const msg = lineDiv.querySelector('.msg');
   if (!msg) return;
@@ -235,9 +258,12 @@ function projectFromLineDiv(lineDiv){
 }
 
 function rebuildWhiteRoom(){
-  pages = [];
+  activePage = null;
+  archivedCount = 0;
   lineMap = new WeakMap();
-  pagesLayer.innerHTML = '';
+  activeLayer.innerHTML = '';
+  archiveLayer.innerHTML = '';
+  createActivePage();
   Array.from(log.children).forEach(projectFromLineDiv);
 }
 
@@ -680,7 +706,6 @@ closeAdminBtn.addEventListener("click", () => hideAdmin());
 autoresizeInput();
 focusChat();
 
-if (PERSIST_ENABLED) restoreChatHistory();
 rebuildWhiteRoom();
 runIntroIfNeeded();
 </script>
