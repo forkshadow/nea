@@ -412,7 +412,9 @@
     }
 
     // ----- UX input
-    document.addEventListener('click', () => {
+    document.addEventListener('click', (e) => {
+      const t = e.target;
+      if (t instanceof Element && t.closest('textarea, input, button, a, [contenteditable="true"]')) return;
       if (state !== STATE.LOCKED) input.focus();
     });
 
