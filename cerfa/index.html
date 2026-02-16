@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Assistant Cerfa - Traitement local</title>
+  <link rel="stylesheet" href="./styles.css" />
+
+  <script src="./lib/tesseract.min.js" defer></script>
+  <script src="./lib/pdf-lib.min.js" defer></script>
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <header class="banner" role="status" aria-live="polite">
+    🔒 Traitement local uniquement. Aucun envoi.
+  </header>
+
+  <main class="container">
+    <h1>Pré-remplissage Cerfa (MVP local navigateur)</h1>
+    <p class="subtitle">Chargez les documents, lancez l'OCR local, corrigez, puis exportez.</p>
+
+    <section class="tips" aria-label="Conseils de prise de photo">
+      <h2>Conseils photo</h2>
+      <ul>
+        <li>Lumière homogène et suffisante.</li>
+        <li>Document posé à plat, dans le cadre.</li>
+        <li>Éviter reflets/ombres fortes.</li>
+        <li>Éviter le flou de mouvement.</li>
+      </ul>
+    </section>
+
+    <section class="documents" aria-label="Documents à analyser">
+      <article class="doc-card">
+        <h3>1) ID vendeur</h3>
+        <div class="actions-row">
+          <label class="btn" for="seller_file">Choisir un fichier</label>
+          <input id="seller_file" type="file" accept="image/*" />
+
+          <label class="btn" for="seller_capture">Prendre une photo (simple)</label>
+          <input id="seller_capture" type="file" accept="image/*" capture="environment" />
+
+          <button class="btn" type="button" data-open-camera="seller">Prendre une photo (avancé)</button>
+        </div>
+        <img id="seller_preview" class="preview" alt="Aperçu ID vendeur" />
+      </article>
+
+      <article class="doc-card">
+        <h3>2) Carte grise</h3>
+        <div class="actions-row">
+          <label class="btn" for="registration_file">Choisir un fichier</label>
+          <input id="registration_file" type="file" accept="image/*" />
+
+          <label class="btn" for="registration_capture">Prendre une photo (simple)</label>
+          <input id="registration_capture" type="file" accept="image/*" capture="environment" />
+
+          <button class="btn" type="button" data-open-camera="registration">Prendre une photo (avancé)</button>
+        </div>
+        <img id="registration_preview" class="preview" alt="Aperçu carte grise" />
+      </article>
+
+      <article class="doc-card">
+        <h3>3) ID acheteur</h3>
+        <div class="actions-row">
+          <label class="btn" for="buyer_file">Choisir un fichier</label>
+          <input id="buyer_file" type="file" accept="image/*" />
+
+          <label class="btn" for="buyer_capture">Prendre une photo (simple)</label>
+          <input id="buyer_capture" type="file" accept="image/*" capture="environment" />
+
+          <button class="btn" type="button" data-open-camera="buyer">Prendre une photo (avancé)</button>
+        </div>
+        <img id="buyer_preview" class="preview" alt="Aperçu ID acheteur" />
+      </article>
+    </section>
+
+    <section class="controls">
+      <button id="analyzeBtn" type="button" class="btn-primary">Analyser</button>
+      <div class="progress-wrap" aria-live="polite">
+        <progress id="ocrProgress" value="0" max="100"></progress>
+        <span id="ocrStatus">En attente d'analyse.</span>
+      </div>
+      <p id="uiMessage" class="ui-message"></p>
+    </section>
+
+    <section class="form-section">
+      <h2>Formulaire éditable</h2>
+      <form id="cerfaForm">
+        <fieldset>
+          <legend>Vendeur</legend>
+          <label>Nom <input id="seller_lastname" name="seller_lastname" /></label>
+          <label>Prénom <input id="seller_firstname" name="seller_firstname" /></label>
+          <label>Date de naissance <input id="seller_dob" name="seller_dob" placeholder="JJ/MM/AAAA" /></label>
+          <label>Adresse <input id="seller_address" name="seller_address" /></label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Acheteur</legend>
+          <label>Nom <input id="buyer_lastname" name="buyer_lastname" /></label>
+          <label>Prénom <input id="buyer_firstname" name="buyer_firstname" /></label>
+          <label>Date de naissance <input id="buyer_dob" name="buyer_dob" placeholder="JJ/MM/AAAA" /></label>
+          <label>Adresse <input id="buyer_address" name="buyer_address" /></label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Véhicule</legend>
+          <label>Immatriculation <input id="vehicle_plate" name="vehicle_plate" /></label>
+          <label>VIN <input id="vehicle_vin" name="vehicle_vin" /></label>
+          <label>Marque <input id="vehicle_make" name="vehicle_make" /></label>
+          <label>Modèle <input id="vehicle_model" name="vehicle_model" /></label>
+          <label>Date 1re immatriculation <input id="vehicle_first_reg_date" name="vehicle_first_reg_date" placeholder="JJ/MM/AAAA" /></label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Cession</legend>
+          <label>Date <input id="date" name="date" placeholder="JJ/MM/AAAA" /></label>
+          <label>Heure <input id="sale_time" name="sale_time" placeholder="HH:MM" /></label>
+          <label>Lieu <input id="sale_place" name="sale_place" /></label>
+        </fieldset>
+      </form>
+
+      <div class="controls">
+        <button id="pdfBtn" type="button" class="btn-primary">Générer PDF récapitulatif</button>
+        <button id="templatePdfBtn" type="button" class="btn-secondary">Générer Cerfa PDF (template)</button>
+        <button id="printBtn" type="button" class="btn-secondary">Imprimer</button>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="cameraDialog">
+    <form method="dialog" class="camera-box">
+      <h3>Capture avancée</h3>
+      <video id="cameraVideo" autoplay playsinline></video>
+      <canvas id="cameraCanvas" hidden></canvas>
+      <div class="camera-actions">
+        <button id="captureBtn" type="button" class="btn-primary">Capturer</button>
+        <button id="closeCameraBtn" type="button" class="btn-secondary">Fermer</button>
+      </div>
+      <p id="cameraStatus">Autorisez la caméra pour capturer le document.</p>
+    </form>
+  </dialog>
+</body>
+</html>
