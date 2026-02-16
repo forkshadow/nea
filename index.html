@@ -412,10 +412,19 @@
     }
 
     // ----- UX input
-    document.addEventListener('click', (e) => {
-      const t = e.target;
-      if (t instanceof Element && t.closest('textarea, input, button, a, [contenteditable="true"]')) return;
-      if (state !== STATE.LOCKED) input.focus();
+    function isInteractiveEventTarget(target){
+      if (!(target instanceof Node)) return false;
+      const probe = target.nodeType === Node.TEXT_NODE ? target.parentElement : target;
+      if (probe instanceof Element && probe.closest('textarea, input, button, a, [contenteditable="true"]')){
+        return true;
+      }
+      return false;
+    }
+
+    document.addEventListener('pointerdown', (e) => {
+      if (state === STATE.LOCKED) return;
+      if (isInteractiveEventTarget(e.target)) return;
+      input.focus({ preventScroll: true });
     });
 
     input.addEventListener('input', autoresizeInput);
