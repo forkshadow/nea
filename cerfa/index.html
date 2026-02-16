@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Assistant Cerfa - Traitement local</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="banner" role="status" aria-live="polite">
+    🔒 Traitement local uniquement. Aucun envoi.
+  </header>
+
+  <main class="container">
+    <h1>Pré-remplissage Cerfa (MVP local navigateur)</h1>
+    <p class="subtitle">Importez les 3 documents, lancez l'analyse OCR locale, corrigez les champs puis générez un PDF récapitulatif.</p>
+
+    <section class="tips" aria-label="Conseils de prise de photo">
+      <h2>Conseils photo</h2>
+      <ul>
+        <li>Lumière homogène (éviter contre-jour).</li>
+        <li>Document à plat, entièrement visible.</li>
+        <li>Éviter les reflets et les ombres fortes.</li>
+        <li>Texte net, sans flou de mouvement.</li>
+      </ul>
+    </section>
+
+    <section class="documents" aria-label="Documents à analyser">
+      <article class="doc-card" data-doc="sellerId">
+        <h3>1) ID vendeur</h3>
+        <div class="actions-row">
+          <label class="btn" for="sellerId-file">Choisir un fichier</label>
+          <input id="sellerId-file" type="file" accept="image/*" />
+
+          <label class="btn" for="sellerId-capture">Prendre une photo (simple)</label>
+          <input id="sellerId-capture" type="file" accept="image/*" capture="environment" />
+
+          <button class="btn" type="button" data-open-camera="sellerId">Prendre une photo (avancé)</button>
+        </div>
+        <img id="sellerId-preview" class="preview" alt="Aperçu ID vendeur" />
+      </article>
+
+      <article class="doc-card" data-doc="registration">
+        <h3>2) Carte grise</h3>
+        <div class="actions-row">
+          <label class="btn" for="registration-file">Choisir un fichier</label>
+          <input id="registration-file" type="file" accept="image/*" />
+
+          <label class="btn" for="registration-capture">Prendre une photo (simple)</label>
+          <input id="registration-capture" type="file" accept="image/*" capture="environment" />
+
+          <button class="btn" type="button" data-open-camera="registration">Prendre une photo (avancé)</button>
+        </div>
+        <img id="registration-preview" class="preview" alt="Aperçu carte grise" />
+      </article>
+
+      <article class="doc-card" data-doc="buyerId">
+        <h3>3) ID acheteur</h3>
+        <div class="actions-row">
+          <label class="btn" for="buyerId-file">Choisir un fichier</label>
+          <input id="buyerId-file" type="file" accept="image/*" />
+
+          <label class="btn" for="buyerId-capture">Prendre une photo (simple)</label>
+          <input id="buyerId-capture" type="file" accept="image/*" capture="environment" />
+
+          <button class="btn" type="button" data-open-camera="buyerId">Prendre une photo (avancé)</button>
+        </div>
+        <img id="buyerId-preview" class="preview" alt="Aperçu ID acheteur" />
+      </article>
+    </section>
+
+    <section class="controls">
+      <button id="analyzeBtn" type="button" class="btn-primary">Analyser</button>
+      <div class="progress-wrap" aria-live="polite">
+        <progress id="ocrProgress" value="0" max="100"></progress>
+        <span id="ocrStatus">En attente d'analyse.</span>
+      </div>
+    </section>
+
+    <section class="form-section">
+      <h2>Formulaire éditable</h2>
+      <form id="cerfaForm">
+        <fieldset>
+          <legend>Vendeur</legend>
+          <label>Nom <input name="sellerName" /></label>
+          <label>Prénom <input name="sellerFirstName" /></label>
+          <label>Date de naissance <input name="sellerBirthDate" placeholder="JJ/MM/AAAA" /></label>
+          <label>Adresse <input name="sellerAddress" /></label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Acheteur</legend>
+          <label>Nom <input name="buyerName" /></label>
+          <label>Prénom <input name="buyerFirstName" /></label>
+          <label>Date de naissance <input name="buyerBirthDate" placeholder="JJ/MM/AAAA" /></label>
+          <label>Adresse <input name="buyerAddress" /></label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Véhicule</legend>
+          <label>Immatriculation <input name="plate" /></label>
+          <label>VIN <input name="vin" /></label>
+          <label>Marque <input name="brand" /></label>
+          <label>Modèle <input name="model" /></label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Cession</legend>
+          <label>Date de cession <input name="saleDate" placeholder="JJ/MM/AAAA" /></label>
+          <label>Heure de cession <input name="saleTime" placeholder="HH:MM" /></label>
+          <label>Lieu <input name="salePlace" /></label>
+        </fieldset>
+      </form>
+
+      <div class="controls">
+        <button id="pdfBtn" type="button" class="btn-primary">Générer PDF</button>
+        <button id="printBtn" type="button" class="btn-secondary">Imprimer</button>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="cameraDialog">
+    <form method="dialog" class="camera-box">
+      <h3>Capture avancée</h3>
+      <video id="cameraVideo" autoplay playsinline></video>
+      <canvas id="cameraCanvas" hidden></canvas>
+      <div class="camera-actions">
+        <button id="captureBtn" type="button" class="btn-primary">Capturer</button>
+        <button id="closeCameraBtn" type="button" class="btn-secondary">Fermer</button>
+      </div>
+      <p id="cameraStatus">Autorisez la caméra pour capturer le document.</p>
+    </form>
+  </dialog>
+
+  <script src="lib/tesseract.min.js"></script>
+  <script src="lib/pdf-lib.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
