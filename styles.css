@@ -1,0 +1,89 @@
+:root{
+  --bg:#000;
+  --fg:#fff;
+  --barW:16px;
+  --barH:30px;
+  --fs:26px;
+  --gap:10px;
+  --respDelayMs:2000;
+}
+
+html,
+body{
+  margin:0;
+  padding:0;
+  width:100%;
+  height:100%;
+  background:var(--bg);
+  color:var(--fg);
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  overflow:hidden;
+}
+
+#stage{
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  box-sizing:border-box;
+}
+
+#panel{
+  width:min(900px, 92vw);
+}
+
+#log{
+  min-height:180px;
+  max-height:45vh;
+  overflow:auto;
+  padding:0 2px 18px;
+  box-sizing:border-box;
+  line-height:1.35;
+  font-size:18px;
+  opacity:.92;
+}
+
+.line{
+  margin:10px 0;
+  white-space:pre-wrap;
+}
+
+.who{
+  opacity:.70;
+  margin-right:8px;
+}
+
+#row{
+  display:flex;
+  align-items:flex-end;
+  gap:var(--gap);
+}
+
+#chatInput{
+  flex:1 1 auto;
+  min-height:var(--barH);
+  max-height:140px;
+  border:0;
+  outline:0;
+  resize:none;
+  padding:0;
+  margin:0;
+  background:transparent;
+  color:var(--fg);
+  font:inherit;
+  font-size:var(--fs);
+  line-height:1.35;
+  caret-color:var(--fg);
+  overflow:auto;
+  pointer-events:auto;
+  user-select:text;
+  -webkit-user-select:text;
+  -webkit-touch-callout:default;
+}
+
+#hint{
+  margin-top:14px;
+  font-size:14px;
+  opacity:.35;
+}
