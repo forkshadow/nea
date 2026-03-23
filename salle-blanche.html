@@ -593,8 +593,16 @@ function isInteractiveEventTarget(target){
     && !!probe.closest("textarea, input, button, a, [contenteditable='true']");
 }
 
-document.addEventListener("pointerdown", (e)=>{
-  if (isInteractiveEventTarget(e.target)) return;
+function shouldFocusChatFromEvent(e){
+  if (e.defaultPrevented) return false;
+  if (e.button !== undefined && e.button !== 0) return false;
+  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return false;
+  return !isInteractiveEventTarget(e.target);
+}
+
+
+document.addEventListener("click", (e)=>{
+  if (!shouldFocusChatFromEvent(e)) return;
   focusChat();
 });
 window.addEventListener("load", ()=>setTimeout(focusChat, 120));

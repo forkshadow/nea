@@ -421,9 +421,16 @@
       return false;
     }
 
-    document.addEventListener('pointerdown', (e) => {
+    function shouldFocusChatFromEvent(e){
+      if (e.defaultPrevented) return false;
+      if (e.button !== undefined && e.button !== 0) return false;
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return false;
+      return !isInteractiveEventTarget(e.target);
+    }
+
+    document.addEventListener('click', (e) => {
       if (state === STATE.LOCKED) return;
-      if (isInteractiveEventTarget(e.target)) return;
+      if (!shouldFocusChatFromEvent(e)) return;
       input.focus({ preventScroll: true });
     });
 
